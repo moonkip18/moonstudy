@@ -102,6 +102,47 @@ body{
 .bbg{height:1px;background:#1a1a1a;border-radius:1px;}
 .bfill{height:100%;border-radius:1px;transition:width .8s;}
 
+/* ─── ANALYTICS ─── */
+#tab-analytics{padding:20px 24px;}
+.analytics-card{background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:16px;margin-bottom:16px;}
+.card-title{font-size:11px;color:#666;letter-spacing:.2em;text-transform:uppercase;margin-bottom:12px;}
+.comparison-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a1a;}
+.comparison-row:last-child{border-bottom:none;}
+.comp-label{font-size:12px;color:#888;}
+.comp-value{font-size:14px;color:#C8FF00;font-weight:600;}
+.comp-delta{font-size:10px;margin-left:6px;}
+.delta-up{color:#34D399;}
+.delta-down{color:#FF7055;}
+.heatmap-wrap{background:#0f0f0f;border:1px solid #1a1a1a;border-radius:10px;padding:12px;margin-bottom:16px;overflow-x:auto;}
+.heatmap-container{display:inline-flex;flex-direction:column;gap:8px;min-width:min-content;}
+.heatmap-label{font-size:8px;color:#666;min-width:40px;padding-right:8px;}
+.heatmap-row{display:flex;gap:4px;align-items:center;}
+.heatmap-cell{width:16px;height:16px;border-radius:3px;border:1px solid #1a1a1a;cursor:pointer;transition:all .2s;position:relative;}
+.heatmap-cell:hover{border-color:#C8FF00;}
+.time-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:16px;}
+.time-slot{background:#0f0f0f;border:1px solid #1a1a1a;border-radius:8px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;}
+.time-slot:hover{border-color:#C8FF00;background:#0f0f0f;}
+.time-slot.active{background:#C8FF0022;border-color:#C8FF00;}
+.ts-label{font-size:8px;color:#888;margin-bottom:4px;letter-spacing:.1em;}
+.ts-value{font-size:14px;color:#C8FF00;font-weight:600;}
+.subject-trend{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #1a1a1a;}
+.subject-trend:last-child{border-bottom:none;}
+.trend-name{font-size:12px;color:#888;min-width:60px;}
+.trend-bar{flex:1;height:20px;background:#1a1a1a;border-radius:6px;margin:0 12px;position:relative;overflow:hidden;}
+.trend-fill{height:100%;background:#C8FF00;border-radius:6px;transition:width .6s;}
+.trend-stats{display:flex;gap:12px;align-items:center;}
+.trend-value{font-size:12px;color:#C8FF00;min-width:30px;text-align:right;}
+.trend-badge{font-size:8px;padding:2px 6px;border-radius:4px;letter-spacing:.1em;text-transform:uppercase;}
+.trend-up{background:#34D39922;color:#34D399;}
+.trend-down{background:#FF705522;color:#FF7055;}
+.export-btn{width:100%;background:#C8FF00;color:#000;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-bottom:8px;}
+.milestone-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;}
+.milestone-row:not(:last-child){border-bottom:1px solid #1a1a1a;}
+.milestone-label{font-size:12px;color:#888;}
+.milestone-progress{flex:1;height:4px;background:#1a1a1a;border-radius:2px;margin:0 12px;overflow:hidden;}
+.milestone-fill{height:100%;background:#C8FF00;border-radius:2px;transition:width .6s;}
+.milestone-val{font-size:11px;color:#666;min-width:45px;text-align:right;}
+
 /* ─── EDIT ─── */
 #tab-edit{padding:20px 24px;}
 .addrow{display:flex;gap:8px;margin-bottom:20px;}
@@ -220,12 +261,14 @@ body{
 <div id="content">
   <div id="tab-today"></div>
   <div id="tab-chart" style="display:none"></div>
+  <div id="tab-analytics" style="display:none"></div>
   <div id="tab-edit" style="display:none"></div>
 </div>
 
 <div id="nav">
   <button class="nbtn on" id="nb-today" onclick="go('today')">TODAY</button>
   <button class="nbtn" id="nb-chart" onclick="go('chart')">CHART</button>
+  <button class="nbtn" id="nb-analytics" onclick="go('analytics')">STATS</button>
   <button class="nbtn" id="nb-edit" onclick="go('edit')">EDIT</button>
 </div>
 
@@ -245,6 +288,7 @@ const S=n=>String(n).padStart(2,'0');
 const dkeyFor=d=>`${d.getFullYear()}-${S(d.getMonth()+1)}-${S(d.getDate())}`;
 const todayKey=()=>dkeyFor(new Date());
 const fmt=s=>{s=Math.max(0,Math.floor(s));return`${Math.floor(s/3600)}:${S(Math.floor(s%3600/60))}:${S(s%60)}`;};
+const fmtH=s=>{const h=s/3600;return h.toFixed(1);};
 const ls=(k,fb)=>{try{const v=JSON.parse(localStorage.getItem(k));return v!=null?v:fb;}catch{return fb;}};
 const ss=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}};
 const vib=p=>{try{navigator.vibrate&&navigator.vibrate(p);}catch{}};
@@ -358,10 +402,286 @@ function updateNav(){
   nb.innerHTML='TODAY'+(active&&tab!=='today'?'<span class="ndot"></span>':'');
 }
 
+// ── ANALYTICS ────────────────────────────────────────────────────
+function renderAnalytics(){
+  const el=document.getElementById('tab-analytics');
+  const now=new Date();
+  
+  // Weekly/Monthly comparison
+  const thisWeekTotal=getWeekTotal(0);
+  const lastWeekTotal=getWeekTotal(1);
+  const thisMonthTotal=getMonthTotal(chartMo,chartYr);
+  const lastMonthTotal=getMonthTotal(chartMo===0?11:chartMo-1,chartMo===0?chartYr-1:chartYr);
+  
+  const weekDelta=thisWeekTotal-lastWeekTotal;
+  const monthDelta=thisMonthTotal-lastMonthTotal;
+  
+  // Best time of day
+  const timeSlots=getTimeSlots();
+  const bestTime=Object.entries(timeSlots).reduce((a,b)=>b[1]>a[1]?b:a);
+  
+  // Subject trends
+  const trends=getSubjectTrends();
+  
+  // Heatmap data (last 13 weeks)
+  const heatmapData=getHeatmapData();
+  
+  // Milestones
+  const allTimeTotal=getAllTimeTotal();
+  const milestones=[100,250,500,1000];
+  
+  el.innerHTML=`
+    <div class="analytics-card">
+      <div class="card-title">📊 Weekly comparison</div>
+      <div class="comparison-row">
+        <span class="comp-label">This week</span>
+        <span class="comp-value">${thisWeekTotal.toFixed(1)}h</span>
+      </div>
+      <div class="comparison-row">
+        <span class="comp-label">Last week</span>
+        <span class="comp-value">${lastWeekTotal.toFixed(1)}h</span>
+        <span class="comp-delta ${weekDelta>=0?'delta-up':'delta-down'}">${weekDelta>=0?'+':''}${weekDelta.toFixed(1)}h</span>
+      </div>
+    </div>
+    
+    <div class="analytics-card">
+      <div class="card-title">📈 Monthly comparison</div>
+      <div class="comparison-row">
+        <span class="comp-label">${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][chartMo]}</span>
+        <span class="comp-value">${thisMonthTotal.toFixed(1)}h</span>
+      </div>
+      <div class="comparison-row">
+        <span class="comp-label">Previous month</span>
+        <span class="comp-value">${lastMonthTotal.toFixed(1)}h</span>
+        <span class="comp-delta ${monthDelta>=0?'delta-up':'delta-down'}">${monthDelta>=0?'+':''}${monthDelta.toFixed(1)}h</span>
+      </div>
+    </div>
+    
+    <div class="analytics-card">
+      <div class="card-title">⏰ Best time of day</div>
+      <div class="time-grid">
+        ${Object.entries(timeSlots).map(([slot,val])=>`
+          <div class="time-slot${slot===bestTime[0]?' active':''}">
+            <div class="ts-label">${slot}</div>
+            <div class="ts-value">${val.toFixed(1)}h</div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="font-size:11px;color:#888;text-align:center;">Most productive: <span style="color:#C8FF00;font-weight:600;">${bestTime[0]}</span> (${bestTime[1].toFixed(1)}h)</div>
+    </div>
+    
+    <div class="analytics-card">
+      <div class="card-title">🔥 Activity heatmap (13 weeks)</div>
+      <div class="heatmap-wrap">
+        <div class="heatmap-container">
+          ${heatmapData.map((week,wi)=>`
+            <div class="heatmap-row">
+              <span class="heatmap-label" style="font-size:8px;color:#666;">${week.label||''}</span>
+              ${week.days.map(day=>`
+                <div class="heatmap-cell" style="background:${getHeatColor(day.val)}" title="${day.label}: ${day.val.toFixed(1)}h"></div>
+              `).join('')}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    
+    <div class="analytics-card">
+      <div class="card-title">📚 Subject trends</div>
+      ${trends.map(t=>`
+        <div class="subject-trend">
+          <div class="trend-name">${t.name}</div>
+          <div class="trend-bar"><div class="trend-fill" style="width:${Math.min(100,t.pct)}%;background:${t.color}"></div></div>
+          <div class="trend-stats">
+            <div class="trend-value">${t.thisWeek.toFixed(1)}h</div>
+            <div class="trend-badge ${t.delta>=0?'trend-up':'trend-down'}">${t.delta>=0?'↑':'↓'} ${Math.abs(t.delta).toFixed(1)}h</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="analytics-card">
+      <div class="card-title">🏆 Goal milestones</div>
+      ${milestones.map(m=>`
+        <div class="milestone-row">
+          <span class="milestone-label">${m}h goal</span>
+          <div class="milestone-progress"><div class="milestone-fill" style="width:${Math.min(100,allTimeTotal/m*100)}%"></div></div>
+          <span class="milestone-val">${Math.min(m,Math.floor(allTimeTotal))}/${m}h</span>
+        </div>
+      `).join('')}
+      <div style="font-size:11px;color:#888;margin-top:8px;text-align:center;">All-time: <span style="color:#C8FF00;font-weight:600;">${allTimeTotal.toFixed(0)}h</span></div>
+    </div>
+    
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="export-btn" onclick="exportJSON()">💾 Export JSON</button>
+      <button class="export-btn" style="background:#00D4FF;color:#000;" onclick="exportCSV()">📋 Export CSV</button>
+    </div>
+  `;
+}
+
+function getWeekTotal(weeksBack){
+  const now=new Date();
+  let total=0;
+  for(let i=0;i<7;i++){
+    const d=new Date(now);d.setDate(d.getDate()-i-weeksBack*7);
+    const l=ls('log:'+dkeyFor(d),{});
+    total+=Object.values(l).reduce((a,b)=>a+b,0);
+  }
+  return total/3600;
+}
+
+function getMonthTotal(month,year){
+  const dim=new Date(year,month+1,0).getDate();
+  let total=0;
+  for(let d=1;d<=dim;d++){
+    const k=`${year}-${S(month+1)}-${S(d)}`;
+    const l=ls('log:'+k,{});
+    total+=Object.values(l).reduce((a,b)=>a+b,0);
+  }
+  return total/3600;
+}
+
+function getTimeSlots(){
+  const slots={'6-9am':0,'9am-12pm':0,'12-3pm':0,'3-6pm':0,'6-9pm':0,'9pm-12am':0};
+  // Analyze logs to estimate best time (simple heuristic: even distribution based on hour)
+  const now=new Date();
+  for(let i=0;i<7;i++){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const k=dkeyFor(d);
+    const logs=ls('logs_detailed:'+k,{});
+    for(const[subj,sessions]of Object.entries(logs)){
+      if(Array.isArray(sessions)){
+        sessions.forEach(s=>{
+          const h=new Date(s.start).getHours();
+          if(h>=6&&h<9)slots['6-9am']+=s.dur;
+          else if(h>=9&&h<12)slots['9am-12pm']+=s.dur;
+          else if(h>=12&&h<15)slots['12-3pm']+=s.dur;
+          else if(h>=15&&h<18)slots['3-6pm']+=s.dur;
+          else if(h>=18&&h<21)slots['6-9pm']+=s.dur;
+          else slots['9pm-12am']+=s.dur;
+        });
+      }
+    }
+  }
+  return Object.fromEntries(Object.entries(slots).map(([k,v])=>[k,v/3600]));
+}
+
+function getHeatmapData(){
+  const now=new Date();
+  const data=[];
+  const MO=['J','F','M','A','M','J','J','A','S','O','N','D'];
+  
+  for(let week=12;week>=0;week--){
+    const weekData={days:[],label:''};
+    for(let day=6;day>=0;day--){
+      const d=new Date(now);
+      d.setDate(d.getDate()-(week*7+day));
+      const k=dkeyFor(d);
+      const l=ls('log:'+k,{});
+      const val=Object.values(l).reduce((a,b)=>a+b,0)/3600;
+      weekData.days.unshift({val,label:d.toLocaleDateString('en-US',{month:'short',day:'numeric'})});
+    }
+    if(week%2===0)weekData.label=`W${13-week}`;
+    data.unshift(weekData);
+  }
+  return data;
+}
+
+function getHeatColor(val){
+  if(val===0)return '#0f0f0f';
+  if(val<1)return '#C8FF0022';
+  if(val<2)return '#C8FF0055';
+  if(val<3)return '#C8FF00aa';
+  return '#C8FF00';
+}
+
+function getSubjectTrends(){
+  const thisWeek={};
+  const lastWeek={};
+  
+  const now=new Date();
+  for(let i=0;i<7;i++){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const l=ls('log:'+dkeyFor(d),{});
+    for(const[s,v]of Object.entries(l)){
+      thisWeek[s]=(thisWeek[s]||0)+v;
+    }
+  }
+  for(let i=7;i<14;i++){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const l=ls('log:'+dkeyFor(d),{});
+    for(const[s,v]of Object.entries(l)){
+      lastWeek[s]=(lastWeek[s]||0)+v;
+    }
+  }
+  
+  const thisWeekTotal=Object.values(thisWeek).reduce((a,b)=>a+b,0);
+  
+  return subjects.map(s=>{
+    const tw=thisWeek[s.name]||0;
+    const lw=lastWeek[s.name]||0;
+    const delta=(tw-lw)/3600;
+    return{name:s.name,color:s.color,thisWeek:tw/3600,delta,pct:(thisWeekTotal>0?tw/thisWeekTotal*100:0)};
+  }).filter(t=>t.thisWeek>0);
+}
+
+function getAllTimeTotal(){
+  let total=0;
+  for(let i=0;i<365;i++){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const k=dkeyFor(d);
+    const l=ls('log:'+k,{});
+    total+=Object.values(l).reduce((a,b)=>a+b,0);
+  }
+  return total/3600;
+}
+
+function exportJSON(){
+  const allLogs={};
+  for(let i=0;i<365;i++){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const k=dkeyFor(d);
+    const l=ls('log:'+k,{});
+    if(Object.keys(l).length>0)allLogs[k]=l;
+  }
+  const data={
+    exported:new Date().toISOString(),
+    subjects,
+    logs:allLogs,
+    globalGoalH:ls('goal_h',6),
+    allTimeHours:getAllTimeTotal()
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='study-logs.json';a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 JSON exported');
+}
+
+function exportCSV(){
+  let csv='Date,Subject,Hours\n';
+  for(let i=364;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const k=dkeyFor(d);
+    const l=ls('log:'+k,{});
+    if(Object.keys(l).length>0){
+      for(const[subj,sec]of Object.entries(l)){
+        csv+=`"${k}","${subj}",${(sec/3600).toFixed(2)}\n`;
+      }
+    }
+  }
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='study-logs.csv';a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 CSV exported');
+}
+
 // ── RENDER ───────────────────────────────────────────────────────
 function render(){
   if(tab==='today')renderToday();
   else if(tab==='chart')renderChart();
+  else if(tab==='analytics')renderAnalytics();
   else renderEdit();
   // header fast path
   const tot=total();const gl=globalGoalSec();
@@ -457,7 +777,7 @@ function renderChart(){
   const logged=subjects.filter(s=>log[s.name]!=null&&log[s.name]>0||active===s.name);
   const bhtml=logged.length?logged.map(s=>{
     const sec=ssec(s.name),pct=tot>0?sec/tot:0,on=active===s.name;
-    return `<div class="brow"><div class="btop"><span class="bname">${s.name}</span><span class="btime" style="color:${on?s.color:'#777'}">${fmt(sec)}</span></div><div class="bbg"><div class="bfill" style="width:${pct*100}%;background:${on?s.color:'#333'}"></div></div></div>`;
+    return `<div class="brow"><div class="btop"><span class="bname">${s.name}</span><span class="btime" style="color:${on?s.color:'#777'}">${fmt(sec)}</span></div><div class="bbg"><div class="bfill" style="width:${pct*100}%;background:${s.color}88;"></div></div></div>`;
   }).join(''):'<div style="color:#555;font-size:11px;letter-spacing:.1em">nothing logged today</div>';
 
   el.innerHTML=`
@@ -508,7 +828,7 @@ function buildSVG(data,xlabels){
   const bestI=drawnIdx[drawn.findIndex(d=>d.h===bestH&&d.h>0)];
   let xl='',yl='';
   xlabels.forEach((l,i)=>{if(l)xl+=`<text x="${xp(i).toFixed(1)}" y="${H-5}" font-size="8" fill="#555" text-anchor="middle" font-family="ui-monospace,monospace">${l}</text>`;});
-  for(let j=0;j<=2;j++){const v=(maxH*j/2).toFixed(1),yv=(pT+(1-j/2)*cH+3).toFixed(1);yl+=`<text x="${pL-5}" y="${yv}" font-size="8" fill="#555" text-anchor="end" font-family="ui-monospace,monospace">${v}</text>`;}
+  for(let j=0;j<=2;j++){const v=(maxH*j/2).toFixed(1),yv=(pT+(1-j/2)*cH+3).toFixed(1);yl+=`<text x="${pL-5}" y="${yv}" font-size="8" fill="#555" text-anchor="end" font-family="ui-monospace,monospace">${v}h</text>`;}
   const dots=drawnIdx.map(i=>{
     const d=data[i];if(d.h===0)return'';
     const cx=xp(i).toFixed(1),cy=yp(d.h).toFixed(1);
@@ -650,7 +970,7 @@ function showToast(msg,type=''){
 // ── NAV ──────────────────────────────────────────────────────────
 function go(t){
   tab=t;
-  ['today','chart','edit'].forEach(id=>{
+  ['today','chart','analytics','edit'].forEach(id=>{
     document.getElementById('tab-'+id).style.display=id===t?'block':'none';
     document.getElementById('nb-'+id).className='nbtn'+(id===t?' on':'');
   });
