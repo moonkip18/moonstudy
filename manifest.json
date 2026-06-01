@@ -1,0 +1,49 @@
+{
+  "name": "Study Tracker",
+  "short_name": "Study",
+  "description": "A minimal study time tracker with goals, analytics, and subject tracking",
+  "start_url": "/moonstudy/study-tracker-5.html",
+  "scope": "/moonstudy/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#080808",
+  "background_color": "#080808",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23080808' width='192' height='192'/><text x='96' y='120' font-size='120' font-weight='bold' fill='%23C8FF00' text-anchor='middle' font-family='monospace'>📚</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23080808' width='512' height='512'/><text x='256' y='350' font-size='300' font-weight='bold' fill='%23C8FF00' text-anchor='middle' font-family='monospace'>📚</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23080808' width='540' height='720'/><text x='270' y='360' font-size='80' fill='%23C8FF00' text-anchor='middle' font-family='monospace'>Study Tracker</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["productivity", "education"],
+  "shortcuts": [
+    {
+      "name": "Start Study Session",
+      "short_name": "Study",
+      "description": "Open the Study Tracker app",
+      "url": "/moonstudy/study-tracker-5.html",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23C8FF00' width='192' height='192'/><text x='96' y='120' font-size='100' font-weight='bold' fill='%23080808' text-anchor='middle' font-family='monospace'>▶</text></svg>",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
