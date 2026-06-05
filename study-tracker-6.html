@@ -646,6 +646,7 @@ function openCP(i){cpTarget=i;const ov=document.createElement('div');ov.classNam
 function pickC(c){if(cpTarget==null)return;subjects[cpTarget].color=c;ss('subjects_v2',subjects);closeCP();render();}
 function closeCP(){const ov=document.getElementById('cpov');if(ov)ov.remove();cpTarget=null;}
 
+
 // ── EXPORT ────────────────────────────────────────────────────────
 function exportJSON(){const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k)try{data[k]=JSON.parse(localStorage.getItem(k));}catch{data[k]=localStorage.getItem(k);}}shareDl(JSON.stringify(data,null,2),'study-backup.json','application/json');}
 function exportCSV(){let csv='date,subject,seconds,hours\n';for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('log:')){const date=k.slice(4);Object.entries(ls(k,{})).forEach(([sub,sec])=>{csv+=`${date},"${sub}",${sec},${(sec/3600).toFixed(2)}\n`;});}}shareDl(csv,'study-log.csv','text/csv');}
@@ -663,6 +664,145 @@ function go(t){
 }
 
 init();
+
+  <!-- START OF SCIENTIFIC FOCUS NOISE GENERATOR -->
+<div class="focus-generator-container">
+    <div class="generator-header">
+        <span class="generator-icon">🧠</span>
+        <h3 class="generator-title">Deep Focus Mode</h3>
+    </div>
+    <p class="generator-subtitle">Scientifically proven Brown Noise to mask distractions.</p>
+    
+    <button id="noise-btn" class="noise-button" onclick="toggleNoise()">
+        🎧 Start Focus Noise
+    </button>
+</div>
+
+<style>
+    /* Theme-inheriting styles */
+    .focus-generator-container {
+        font-family: inherit;
+        width: 100%;
+        max-width: 400px;
+        margin: 2rem auto;
+        padding: 1.5rem;
+        box-sizing: border-box;
+        border: 1px solid rgba(128, 128, 128, 0.2);
+        border-radius: 12px;
+        background-color: transparent;
+        text-align: center;
+    }
+    .generator-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .generator-title {
+        color: inherit;
+        font-size: 1.25rem;
+        margin: 0;
+    }
+    .generator-subtitle {
+        color: inherit;
+        opacity: 0.7;
+        font-size: 0.85rem;
+        margin: 0 0 1.5rem 0;
+    }
+    .noise-button {
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        width: 100%;
+    }
+    .noise-button:hover {
+        background-color: #2563eb;
+    }
+    .noise-button.playing {
+        background-color: #ef4444;
+    }
+    .noise-button.playing:hover {
+        background-color: #dc2626;
+    }
+</style>
+
+<script>
+    // Audio Context variables
+    let audioCtx;
+    let sourceNode;
+    let gainNode;
+    let isNoisePlaying = false;
+
+    function toggleNoise() {
+        const btn = document.getElementById('noise-btn');
+
+        // Initialize AudioContext on first click (browsers require user interaction first)
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (isNoisePlaying) {
+            // Smoothly fade out to avoid a harsh popping sound
+            gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+            setTimeout(() => {
+                sourceNode.stop();
+                sourceNode.disconnect();
+            }, 500);
+            
+            isNoisePlaying = false;
+            btn.innerText = '🎧 Start Focus Noise';
+            btn.classList.remove('playing');
+        } else {
+            // Generate Brown Noise buffer (5 seconds looping)
+            const bufferSize = audioCtx.sampleRate * 5;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                let white = Math.random() * 2 - 1;
+                // Brown noise algorithm
+                data[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = data[i];
+                data[i] *= 3.5; // Compensate for volume drop
+            }
+
+            sourceNode = audioCtx.createBufferSource();
+            sourceNode.buffer = buffer;
+            sourceNode.loop = true;
+
+            // Apply a low-pass filter to make it sound warmer and less hissy
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 600; 
+
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0; // Start at 0 for fade in
+            
+            // Connect the nodes: Source -> Filter -> Gain -> Speakers
+            sourceNode.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            sourceNode.start();
+            // Smoothly fade in to 50% volume
+            gainNode.gain.setTargetAtTime(0.5, audioCtx.currentTime, 1);
+            
+            isNoisePlaying = true;
+            btn.innerText = '⏸ Stop Focus Noise';
+            btn.classList.add('playing');
+        }
+    }
+</script>
+<!-- END OF SCIENTIFIC FOCUS NOISE GENERATOR -->
+
 </script>
 </body>
 </html>
