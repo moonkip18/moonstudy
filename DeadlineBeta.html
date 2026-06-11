@@ -1769,122 +1769,70 @@ function showToast(msg,type=''){
 }
 
 // ════════════════════════════════════════════════════
-// MANUAL WEBRTC SYNC — COPY/PASTE CODES
+// SIMPLE PAIR CODE SYNC — 4 LETTERS ONLY
 // ════════════════════════════════════════════════════
-let peerConnection = null;
-let dataChannel = null;
+let pairCode = '';
+let pairInterval = null;
 
-function setupDataChannel(channel) {
-    channel.onopen = () => {
-        console.log('📡 Peer connected!');
-        setSyncStatus('synced');
-        document.getElementById('sync-dot').className = 'sdot synced';
-        document.getElementById('sync-lbl').textContent = 'connected';
-        
-        // Send our leaderboard entry
-        const key = 'lb_entry_' + tabId;
-        const entry = localStorage.getItem(key);
-        if (entry) channel.send(JSON.stringify({ type: 'lb', key, value: JSON.parse(entry) }));
-    };
-    
-    channel.onmessage = (event) => {
-        try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'lb' && msg.key && msg.value) {
-                localStorage.setItem(msg.key, JSON.stringify(msg.value));
-                broadcastChange({ type: 'leaderboard-changed' });
-                if (tab === 'lb') renderLB();
-            }
-        } catch(e) {}
-    };
-    
-    channel.onclose = () => {
-        setSyncStatus('local');
-        document.getElementById('sync-dot').className = 'sdot';
-        document.getElementById('sync-lbl').textContent = 'disconnected';
-    };
-    
-    dataChannel = channel;
-}
-
-function broadcastToPeer(data) {
-    if (dataChannel && dataChannel.readyState === 'open') {
-        dataChannel.send(JSON.stringify(data));
+function startPair() {
+    pairCode = document.getElementById('pair-input').value.trim().toUpperCase();
+    if (!pairCode || pairCode.length < 2) {
+        pairCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+        document.getElementById('pair-input').value = pairCode;
     }
-}
-
-// Override updateLeaderboardEntry
-const _origUpdateLB = updateLeaderboardEntry;
-updateLeaderboardEntry = function() {
-    _origUpdateLB();
-    const key = 'lb_entry_' + tabId;
-    const entry = localStorage.getItem(key);
-    if (entry) broadcastToPeer({ type: 'lb', key, value: JSON.parse(entry) });
-};
-
-// Device 1: Create offer
-async function createOffer() {
-    peerConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-    dataChannel = peerConnection.createDataChannel('studySync');
-    setupDataChannel(dataChannel);
     
-    peerConnection.onicecandidate = (event) => {
-        if (!event.candidate) {
-            // All candidates gathered — show the full offer
-            const offer = btoa(JSON.stringify(peerConnection.localDescription));
-            document.getElementById('sm-offer-text').value = offer;
-            document.getElementById('sm-offer-area').style.display = 'block';
-            document.getElementById('sm-answer-area').style.display = 'none';
-            showToast('📋 Copy this code to the other device', 'info');
+    localStorage.setItem('_pair_code', pairCode);
+    
+    if (pairInterval) clearInterval(pairInterval);
+    
+    pairInterval = setInterval(() => {
+        // Build entry
+        const todaySec = Object.values(ls('log:'+todayKey(),{})).reduce((a,b)=>a+b,0)+(active?live:0);
+        let weekSec=0;
+        for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);weekSec+=Object.values(ls('log:'+dkeyFor(d),{})).reduce((a,b)=>a+b,0);}
+        weekSec+=active?live:0;
+        const entry = {username:syncUsername||'Anon',today_sec:todaySec,week_sec:weekSec,alltime_sec:allTimeSec(),updated_at:Date.now()};
+        
+        // Write to localStorage under the pair code
+        const key = '_pair_' + pairCode;
+        const shared = JSON.parse(localStorage.getItem(key) || '{}');
+        shared[tabId] = entry;
+        localStorage.setItem(key, JSON.stringify(shared));
+        
+        // Store our own LB entry too
+        localStorage.setItem('lb_entry_'+tabId, JSON.stringify(entry));
+        
+        // Read other device's data
+        const all = JSON.parse(localStorage.getItem(key) || '{}');
+        let found = false;
+        Object.entries(all).forEach(([k, v]) => {
+            if (k !== tabId && v && Date.now() - v.updated_at < 300000) {
+                localStorage.setItem('lb_entry_'+k, JSON.stringify(v));
+                found = true;
+            }
+        });
+        
+        if (found) {
+            broadcastChange({type:'leaderboard-changed'});
+            if (tab==='lb') renderLB();
+            document.getElementById('sync-lbl').textContent = '🔗 '+pairCode;
+            document.getElementById('sync-dot').className = 'sdot synced';
         }
-    };
+        
+    }, 1500);
     
-    const offer = await peerConnection.createOffer();
-    await peerConnection.setLocalDescription(offer);
+    showToast('🔗 Pair code: '+pairCode, 'info');
+    document.getElementById('sync-ov').classList.remove('show');
 }
 
-// Device 2: Accept offer and create answer
-async function acceptOffer() {
-    const offerText = document.getElementById('sm-answer-input').value.trim();
-    if (!offerText) return;
-    
-    try {
-        peerConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-        
-        peerConnection.ondatachannel = (event) => setupDataChannel(event.channel);
-        
-        peerConnection.onicecandidate = (event) => {
-            if (!event.candidate) {
-                const answer = btoa(JSON.stringify(peerConnection.localDescription));
-                document.getElementById('sm-answer-text').value = answer;
-                document.getElementById('sm-answer-result').style.display = 'block';
-                showToast('📋 Copy this answer back to Device 1', 'info');
-            }
-        };
-        
-        const offer = JSON.parse(atob(offerText));
-        await peerConnection.setRemoteDescription(offer);
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        
-    } catch(e) {
-        showToast('Invalid offer code', 'red');
-    }
-}
-
-// Device 1: Finalize with answer from Device 2
-async function finalizeConnection() {
-    const answerText = document.getElementById('sm-finalize-input').value.trim();
-    if (!answerText) return;
-    
-    try {
-        const answer = JSON.parse(atob(answerText));
-        await peerConnection.setRemoteDescription(answer);
-        showToast('✅ Connected!', 'info');
-        document.getElementById('sync-ov').classList.remove('show');
-    } catch(e) {
-        showToast('Invalid answer code', 'red');
-    }
+function stopPair() {
+    if (pairInterval) clearInterval(pairInterval);
+    pairInterval = null;
+    pairCode = '';
+    localStorage.removeItem('_pair_code');
+    document.getElementById('sync-lbl').textContent = 'local';
+    document.getElementById('sync-dot').className = 'sdot';
+    setSyncStatus('local');
 }
 
 // Override openSyncModal
@@ -1898,34 +1846,17 @@ openSyncModal = function() {
     roomSection.id = 'sm-room-section';
     roomSection.innerHTML = `
         <div class="sm-row" style="margin-top:12px;">
-            <div class="sm-lbl">Cross-Device Sync (Manual)</div>
-            <div class="sm-hint">Copy/paste codes between devices to connect.</div>
-            
-            <div class="sm-btns" style="margin-bottom:8px;">
-                <button class="sm-btn" onclick="createOffer()">📡 Device 1: Create Code</button>
-                <button class="sm-btn" onclick="document.getElementById('sm-answer-area').style.display='block';document.getElementById('sm-offer-area').style.display='none';">📥 Device 2: Enter Code</button>
-            </div>
-            
-            <!-- Device 1: Shows offer -->
-            <div id="sm-offer-area" style="display:none;">
-                <textarea id="sm-offer-text" class="sm-inp" readonly style="height:60px;font-size:9px;word-break:break-all;margin-top:8px;" placeholder="Your code will appear here..."></textarea>
-                <div class="sm-hint">Copy this ENTIRE code → send to Device 2 → then paste their answer below:</div>
-                <input id="sm-finalize-input" class="sm-inp" placeholder="Paste Device 2's answer here" style="margin-top:8px;"/>
-                <button class="sm-btn primary" onclick="finalizeConnection()" style="margin-top:8px;">Complete Connection</button>
-            </div>
-            
-            <!-- Device 2: Enter offer -->
-            <div id="sm-answer-area" style="display:none;">
-                <input id="sm-answer-input" class="sm-inp" placeholder="Paste Device 1's code here" style="margin-top:8px;"/>
-                <button class="sm-btn primary" onclick="acceptOffer()" style="margin-top:8px;">Accept & Generate Answer</button>
-                <div id="sm-answer-result" style="display:none;margin-top:8px;">
-                    <textarea id="sm-answer-text" class="sm-inp" readonly style="height:60px;font-size:9px;word-break:break-all;" placeholder="Your answer code..."></textarea>
-                    <div class="sm-hint">Copy this code and send it back to Device 1</div>
-                </div>
+            <div class="sm-lbl">Pair Devices</div>
+            <input class="sm-inp" id="pair-input" type="text" maxlength="6" placeholder="4-letter code" style="text-transform:uppercase;font-size:20px;text-align:center;letter-spacing:6px;" autocapitalize="off" autocomplete="off" spellcheck="false"/>
+            <div class="sm-hint">Type the SAME code on both devices.</div>
+            <div class="sm-btns">
+                <button class="sm-btn" onclick="startPair()">🔗 Pair</button>
+                <button class="sm-btn" onclick="stopPair()" style="color:#FF5555;">Stop</button>
             </div>
         </div>
     `;
     document.querySelector('#sync-ov .ovsh').appendChild(roomSection);
+    setTimeout(()=>document.getElementById('pair-input').focus(),100);
 };
 
 // ════════════════════════════════════════════════════
