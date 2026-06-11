@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Study">
+<meta name="apple-mobile-web-app-title" content="Dead-line">
 <title>Dead-line</title>
 <style>
 /* ── TOKENS ─────────────────────────────────────── */
@@ -415,7 +415,7 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 <!-- DISPLAY NAME MODAL -->
 <div class="name-modal" id="name-modal" role="dialog" aria-modal="true" aria-label="Set your display name">
     <div class="name-card">
-        <div class="name-title">Welcome to Study</div>
+        <div class="name-title">Welcome to Dead-line</div>
         <div class="name-subtitle">Choose a display name for the leaderboard</div>
         <input class="name-input" id="name-inp" type="text" maxlength="20" placeholder="e.g. Alex" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="Display name"/>
         <div class="name-buttons">
@@ -1769,16 +1769,49 @@ function showToast(msg,type=''){
 }
 
 // ════════════════════════════════════════════════════
-// YJS + WEBRTC SYNC (CROSS-DEVICE)
+// YJS + WEBRTC SYNC (CROSS-DEVICE) – FIXED CDN FALLBACK
 // ════════════════════════════════════════════════════
-// Load Yjs modules via dynamic imports when ready
 let ydoc = null, yProvider = null, yLeaderboard = null;
 
 async function initYjsSync() {
+    let Y, WebrtcProvider;
+    
+    // Try multiple CDNs for Yjs
+    const yjsCDNs = [
+        'https://cdn.jsdelivr.net/npm/yjs@13.6.8/+esm',
+        'https://unpkg.com/yjs@13.6.8/dist/yjs.mjs'
+    ];
+    for (const url of yjsCDNs) {
+        try {
+            Y = await import(url);
+            break;
+        } catch(e) { console.warn('Yjs import failed from:', url, e); }
+    }
+    if (!Y) {
+        console.warn('Yjs sync unavailable – all CDNs failed');
+        setSyncStatus('local');
+        return;
+    }
+
+    // Try multiple CDNs for y-webrtc
+    const webrtcCDNs = [
+        'https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/bin/y-webrtc.js',
+        'https://unpkg.com/y-webrtc@10.3.0/bin/y-webrtc.js'
+    ];
+    for (const url of webrtcCDNs) {
+        try {
+            ({ WebrtcProvider } = await import(url));
+            break;
+        } catch(e) { console.warn('y-webrtc import failed from:', url, e); }
+    }
+    if (!WebrtcProvider) {
+        console.warn('WebRTC sync unavailable – all CDNs failed');
+        setSyncStatus('local');
+        return;
+    }
+
+    // Yjs + WebRTC ready – create shared document
     try {
-        const Y = await import('https://unpkg.com/yjs@13.6.8/dist/yjs.mjs');
-        const { WebrtcProvider } = await import('https://unpkg.com/y-webrtc@10.3.0/bin/y-webrtc.js');
-        
         ydoc = new Y.Doc();
         yProvider = new WebrtcProvider('study-dashboard-room', ydoc, {
             signaling: ['wss://signaling.yjs.dev'],
@@ -1791,29 +1824,19 @@ async function initYjsSync() {
         // When remote data arrives, sync to localStorage and refresh UI
         yLeaderboard.observe(() => {
             yLeaderboard.forEach((entry, key) => {
-                try {
-                    localStorage.setItem(key, JSON.stringify(entry));
-                } catch(e) {}
+                try { localStorage.setItem(key, JSON.stringify(entry)); } catch(e) {}
             });
-            // Trigger local BroadcastChannel and storage events
             broadcastChange({ type: 'leaderboard-changed' });
             if (tab === 'lb') renderLB();
         });
         
-        // Push our own entry to the shared map
+        // Override updateLeaderboardEntry to also push to Yjs map
+        const originalUpdate = updateLeaderboardEntry;
         updateLeaderboardEntry = function() {
-            // Original update to localStorage + BroadcastChannel
-            const todaySec = Object.values(ls('log:'+todayKey(),{})).reduce((a,b)=>a+b,0)+(active?live:0);
-            let weekSec=0;
-            for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);weekSec+=Object.values(ls('log:'+dkeyFor(d),{})).reduce((a,b)=>a+b,0);}
-            weekSec+=active?live:0;
-            const alltimeSec = allTimeSec();
-            const entry = {username:syncUsername||'Anon',today_sec:todaySec,week_sec:weekSec,alltime_sec:alltimeSec,updated_at:Date.now()};
-            const key = 'lb_entry_'+tabId;
-            try { localStorage.setItem(key, JSON.stringify(entry)); } catch(e) {}
-            broadcastChange({ type: 'leaderboard-changed' });
-            // Push to Yjs if available
-            if (yLeaderboard) yLeaderboard.set(key, entry);
+            originalUpdate();
+            const key = 'lb_entry_' + tabId;
+            const entry = JSON.parse(localStorage.getItem(key));
+            if (entry && yLeaderboard) yLeaderboard.set(key, entry);
         };
         
         // Purge old entries every 60s
@@ -1828,9 +1851,9 @@ async function initYjsSync() {
         }, 60000);
         
         setSyncStatus('synced');
-        console.log('Yjs WebRTC sync initialized');
+        console.log('Yjs WebRTC sync initialized (cross-device ready)');
     } catch(e) {
-        console.warn('Yjs sync unavailable, falling back to local-only', e);
+        console.warn('Yjs sync setup failed:', e);
         setSyncStatus('local');
     }
 }
@@ -1883,7 +1906,7 @@ function initApp(){
     setInterval(()=>{checkDayRollover();},60000);
 
     initBroadcastChannel();
-    initYjsSync();   // <-- new cross-device sync
+    initYjsSync();   // <-- cross-device sync (tries multiple CDNs)
 
     if(!ls('username',null)||ls('username','')===''){
         showNameModal();
@@ -1911,9 +1934,5 @@ if(ls('high_contrast',false))toggleHighContrast(true);
 if(ls('reduce_motion',false))toggleReduceMotion(true);
 </script>
 
-<!-- YJS + WEBRTC MODULES (loaded after main script to avoid blocking) -->
-<script type="module">
-    // The dynamic import in initYjsSync handles loading; this is just a fallback preload hint
-</script>
 </body>
 </html>
