@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" sizes="32x32" href="48343.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="48343.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="48343.png">
+  <link rel="manifest" href="manifest.json?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#080808" id="theme-meta">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Study">
+  <title>Study</title>
+  <style>
+    /* ── MOTION CURVE (Apple-like fluidity) ─────────────────── */
+    :root{
+      --motion:cubic-bezier(0.2,0.8,0.2,1);
+      --motion-fast:cubic-bezier(0.34,1.56,0.64,1);
+      --bg:#080808;--bg2:#0d0d0d;--bg3:#111;--bg4:#161616;
+      --border:#1a1a1a;--border2:#1e1e1e;--border3:#252525;
+      --t1:#e8e8e8;--t2:#999;--t3:#666;--t4:#444;--t5:#2e2e2e;
+      --acc:#C8FF00;--adr:#FF2020;--warn:#FF9F40;--red:#FF7055;
+      --focus-ring:0 0 0 2px #C8FF0077;
+      --reduce-motion:0;
+    }
+    .light{
+      --bg:#f5f5f0;--bg2:#ebebе5;--bg3:#e2e2dc;--bg4:#d8d8d2;
+      --border:#d0d0c8;--border2:#c8c8c0;--border3:#bdbdb5;
+      --t1:#111;--t2:#444;--t3:#666;--t4:#888;--t5:#aaa;
+      --acc:#5a8a00;--adr:#cc0000;--warn:#c07000;--red:#cc4422;
+    }
+    @media(prefers-reduced-motion:reduce){:root{--reduce-motion:1;}}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{height:100%;overscroll-behavior:none;}
+    body{background:var(--bg);color:var(--t1);font-family:ui-monospace,'SF Mono','Courier New',monospace;max-width:440px;margin:0 auto;display:flex;flex-direction:column;height:100%;overflow:hidden;-webkit-font-smoothing:antialiased;}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+    /* ── INTERACTIVE ELEMENTS: MICRO-INTERACTIONS ────────── */
+    button,a{transition:transform .15s var(--motion),opacity .2s var(--motion);}
+    button:active{transform:scale(0.98);}
+    button:focus{outline:none;box-shadow:var(--focus-ring);}
+
+    /* ── SETUP SCREEN ────────────────────────────────────── */
+    #setup{position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:0;animation:setup-fade-in .4s var(--motion) forwards;}
+    #setup.hidden{display:none;}
+    @keyframes setup-fade-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .setup-logo{font-size:28px;letter-spacing:-1px;color:var(--t1);margin-bottom:6px;}
+    .setup-sub{font-size:10px;color:var(--t3);letter-spacing:.3em;text-transform:uppercase;margin-bottom:36px;}
+    .setup-section{width:100%;max-width:380px;margin-bottom:18px;animation:fade-up .5s var(--motion) forwards;}
+    .setup-section:nth-child(2){animation-delay:.1s;opacity:0;}
+    .setup-section:nth-child(3){animation-delay:.2s;opacity:0;}
+    .setup-section:nth-child(4){animation-delay:.3s;opacity:0;}
+    @keyframes fade-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    .setup-lbl{font-size:9px;color:var(--t3);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;}
+    .setup-inp{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--t1);font-size:13px;font-family:inherit;padding:12px 14px;outline:none;transition:border-color .2s var(--motion),box-shadow .2s var(--motion);}
+    .setup-inp:focus{border-color:var(--acc);box-shadow:var(--focus-ring);}
+    .setup-hint{font-size:9px;color:var(--t5);letter-spacing:.06em;margin-top:5px;line-height:1.6;}
+    .setup-hint a{color:var(--t3);text-decoration:underline;}
+    .setup-btn{width:100%;max-width:380px;background:var(--acc);color:#000;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:8px;transition:opacity .2s var(--motion),transform .15s var(--motion);}
+    .setup-btn:hover{opacity:.9;}
+    .setup-btn:active{transform:scale(0.96);}
+    .setup-skip{font-size:9px;color:var(--t4);letter-spacing:.15em;cursor:pointer;margin-top:18px;text-decoration:underline;transition:color .2s var(--motion);}
+    .setup-skip:hover{color:var(--t2);}
+
+    /* ── HEADER ──────────────────────────────────────────── */
+    #bgbar{display:none;background:var(--bg3);border-bottom:1px solid var(--border);padding:5px 24px;font-size:9px;color:var(--t3);letter-spacing:.18em;text-transform:uppercase;flex-shrink:0;align-items:center;gap:10px;}
+    #bgbar.show{display:flex;animation:fade-down .3s var(--motion);}
+    @keyframes fade-down{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+    #bgbar span{color:var(--t2);}
+    #header{padding:22px 24px 0;border-bottom:1px solid var(--border2);flex-shrink:0;}
+    .hdate{font-size:9px;color:var(--t3);letter-spacing:.28em;text-transform:uppercase;margin-bottom:8px;}
+    .hrow{display:flex;justify-content:space-between;align-items:flex-start;}
+    #htimer{font-size:40px;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1;color:var(--t1);transition:color .6s var(--motion),text-shadow .6s var(--motion);}
+    #htimer.adrenaline{color:var(--adr);}
+    @media(prefers-reduced-motion:no-preference){#htimer.adrenaline{text-shadow:0 0 30px #FF202066,0 0 60px #FF202033;animation:ap 2s ease-in-out infinite;}}
+    @keyframes ap{0%,100%{text-shadow:0 0 20px #FF202055,0 0 40px #FF202022;}50%{text-shadow:0 0 44px #FF202099,0 0 80px #FF202044;}}
+    .streak{font-size:10px;color:var(--t3);display:flex;align-items:center;gap:5px;margin-top:6px;}
+    .streak b{color:var(--warn);font-size:15px;}
+    #mode-label{font-size:8px;letter-spacing:.3em;text-transform:uppercase;margin-top:4px;height:10px;transition:color .5s var(--motion);}
+    #mode-label.adrenaline{color:#FF202099;}
+    .srow2{display:flex;justify-content:space-between;align-items:center;margin-top:5px;}
+    #hsession{font-size:9px;color:var(--t3);letter-spacing:.18em;text-transform:uppercase;}
+    #beyond{font-size:9px;color:#FF202088;letter-spacing:.12em;display:none;}
+    #beyond.show{display:block;}
+    .gbwrap{margin:11px 0 15px;}
+    .gb{height:2px;background:var(--border2);border-radius:2px;overflow:hidden;}
+    #gbfill{height:100%;width:0;border-radius:2px;transition:width .8s var(--motion),background .6s var(--motion);will-change:width;}
+    #gbfill.adrenaline{background:var(--adr)!important;}
+    .gpct{font-size:8px;color:var(--t3);letter-spacing:.12em;margin-top:4px;display:flex;justify-content:space-between;}
+
+    /* ── SYNC + THEME TOGGLE ───────────────────────────── */
+    .htoolrow{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;}
+    .sync-pill{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--t4);letter-spacing:.12em;text-transform:uppercase;cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:none;font-family:inherit;transition:all .2s var(--motion);}
+    .sync-pill:hover{border-color:var(--border3);color:var(--t3);}
+    .sync-pill:active{transform:scale(0.96);}
+    .sync-pill:focus{outline:none;box-shadow:var(--focus-ring);}
+    .sdot{width:5px;height:5px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:background .4s var(--motion);}
+    .sdot.synced{background:var(--acc);}
+    @media(prefers-reduced-motion:no-preference){.sdot.syncing{animation:sdp .8s ease-in-out infinite;}}
+    .sdot.syncing{background:var(--warn);}
+    .sdot.error{background:#FF5555;}
+    @keyframes sdp{0%,100%{opacity:.4}50%{opacity:1}}
+    .htools{display:flex;gap:6px;align-items:center;}
+    .icon-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--t3);font-size:13px;padding:3px 8px;cursor:pointer;font-family:inherit;line-height:1.4;transition:all .2s var(--motion);}
+    .icon-btn:focus{outline:none;box-shadow:var(--focus-ring);}
+    .icon-btn:hover{border-color:var(--border3);color:var(--t2);transform:translateY(-1px);}
+    .icon-btn:active{transform:scale(0.96);}
+
+    /* ── CONTENT ─────────────────────────────────────────── */
+    #content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    #content::-webkit-scrollbar{display:none;}
+
+    /* ── TOAST ───────────────────────────────────────────── */
+    .toast{position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);background:var(--acc);color:#000;padding:13px 22px;border-radius:13px;font-size:14px;font-weight:700;z-index:9999;pointer-events:none;animation:toast-in .3s var(--motion) forwards;}
+    @keyframes toast-in{from{opacity:0;transform:translate(-50%,-60%) scale(0.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+    @keyframes toast-out{from{opacity:1;transform:translate(-50%,-50%) scale(1)}to{opacity:0;transform:translate(-50%,-40%) scale(0.95)}}
+    .toast.exiting{animation:toast-out .3s var(--motion) forwards;}
+    .toast.red{background:var(--adr);color:#fff;}
+    .toast.gold{background:linear-gradient(135deg,#FFD700,#FF9F00);color:#000;}
+    .toast.info{background:var(--bg3);color:var(--t2);border:1px solid var(--border2);font-size:12px;}
+
+    /* ── NAV ─────────────────────────────────────────────── */
+    #nav{display:flex;border-top:1px solid var(--border2);background:var(--bg);padding:10px 0 22px;flex-shrink:0;}
+    .nbtn{flex:1;background:none;border:none;color:var(--t5);font-size:7px;cursor:pointer;letter-spacing:.2em;font-family:inherit;text-transform:uppercase;transition:color .2s var(--motion),transform .2s var(--motion);padding:2px 0;}
+    .nbtn:focus{outline:none;box-shadow:inset 0 0 0 1px var(--acc);}
+    .nbtn:active{transform:scale(0.95);}
+    .nbtn.on{color:var(--acc);}
+    .nbtn.adren{color:var(--adr)!important;}
+    .ndot{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--acc);margin-left:4px;vertical-align:middle;animation:dot-pulse .8s var(--motion) infinite;}
+    @keyframes dot-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+    .sndot{display:inline-block;font-size:8px;color:var(--acc);margin-left:3px;vertical-align:middle;}
+
+    /* ── OVERLAYS ────────────────────────────────────────── */
+    .ov{position:fixed;inset:0;background:#000000bb;z-index:500;display:none;align-items:flex-end;justify-content:center;animation:ov-fade-in .3s var(--motion);}
+    .ov.show{display:flex;}
+    @keyframes ov-fade-in{from{opacity:0}to{opacity:1}}
+    .ovsh{background:var(--bg2);border:1px solid var(--border2);border-radius:18px 18px 0 0;padding:20px 22px 36px;width:100%;max-width:440px;max-height:85vh;overflow-y:auto;animation:sheet-slide-up .4s var(--motion-fast);}
+    @keyframes sheet-slide-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .ovsh::-webkit-scrollbar{display:none;}
+    .ov-title{font-size:10px;color:var(--t3);letter-spacing:.25em;text-transform:uppercase;margin-bottom:16px;}
+    .ov-close{float:right;background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;line-height:1;padding:0 4px;transition:transform .2s var(--motion),color .2s var(--motion);}
+    .ov-close:hover{color:var(--t1);}
+    .ov-close:active{transform:scale(0.9);}
+    .ov-close:focus{outline:none;box-shadow:var(--focus-ring);}
+
+    /* ── SYNC MODAL ───────────────────────────────────────── */
+    .sm-row{display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
+    .sm-lbl{font-size:9px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;}
+    .sm-inp{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--t1);font-size:13px;font-family:inherit;padding:10px 12px;width:100%;outline:none;transition:border-color .2s var(--motion),box-shadow .2s var(--motion);}
+    .sm-inp:focus{border-color:var(--acc);box-shadow:var(--focus-ring);}
+    .sm-hint{font-size:9px;color:var(--t5);letter-spacing:.06em;line-height:1.5;}
+    .sm-btns{display:flex;gap:8px;margin-top:6px;}
+    .sm-btn{flex:1;padding:11px;border-radius:10px;font-size:12px;font-family:inherit;cursor:pointer;letter-spacing:.08em;border:1px solid var(--border2);background:var(--bg3);color:var(--t3);transition:all .2s var(--motion);}
+    .sm-btn:focus{outline:none;box-shadow:var(--focus-ring);}
+    .sm-btn:active{transform:scale(0.96);}
+    .sm-btn.primary{background:#C8FF0015;border-color:#C8FF0055;color:var(--acc);font-weight:600;}
+    .sm-status{font-size:9px;color:var(--t4);letter-spacing:.1em;margin-top:10px;text-align:center;min-height:14px;transition:color .3s var(--motion);}
+    .sm-status.ok{color:var(--acc);}
+    .sm-status.err{color:#FF5555;}
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#content" style="display:none">Skip to content</a>
+  <span class="sr-only" aria-live="polite" id="a11y-live"></span>
+
+  <!-- SETUP SCREEN -->
+  <div id="setup" role="dialog" aria-modal="true" aria-label="Setup">
+    <div class="setup-logo" aria-hidden="true">Study</div>
+    <div class="setup-sub">Setup</div>
+    <div class="setup-section">
+      <div class="setup-lbl">Your name (shown on leaderboard)</div>
+      <input class="setup-inp" id="setup-name" type="text" placeholder="e.g. Alex" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Display name"/>
+    </div>
+    <div class="setup-section">
+      <div class="setup-lbl">Firebase (optional — for sync & leaderboard)</div>
+      <input class="setup-inp" id="setup-api-key" type="password" placeholder="API Key" autocomplete="off" spellcheck="false" aria-label="Firebase API Key"/>
+      <div class="setup-lbl" style="margin-top:10px;">Project ID</div>
+      <input class="setup-inp" id="setup-project-id" type="text" placeholder="my-project" autocomplete="off" spellcheck="false" aria-label="Firebase Project ID"/>
+      <div class="setup-hint">
+        Create a Firebase project at <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>. Enable Firestore and get your API Key from Project Settings. Leave blank for offline-only mode.
+      </div>
+    </div>
+    <button class="setup-btn" onclick="AppState.init()" id="setup-go">Get started</button>
+    <div class="setup-skip" tabindex="0" onclick="AppState.skipSetup()" onkeydown="if(event.key==='Enter')AppState.skipSetup()">Skip setup — use offline only</div>
+  </div>
+
+  <!-- HEADER -->
+  <div id="header" role="banner">
+    <div class="hdate" id="hdate" aria-live="polite"></div>
+    <div id="htoday">
+      <div class="hrow">
+        <div id="htimer" aria-live="off" aria-label="Total time today">0:00:00</div>
+        <div class="streak" id="streak" aria-live="polite"></div>
+      </div>
+      <div id="mode-label" aria-live="polite"></div>
+    </div>
+    <div class="htoolrow">
+      <button class="sync-pill" id="sync-pill" onclick="UI.openSyncModal()" aria-label="Sync status — open sync settings">
+        <div class="sdot" id="sync-dot" aria-hidden="true"></div>
+        <span id="sync-lbl">offline</span>
+      </button>
+      <div class="htools">
+        <button class="icon-btn" onclick="UI.toggleTheme()" aria-label="Toggle light/dark mode" title="Theme">☀</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKGROUND TIMER BAR -->
+  <div id="bgbar" role="status"><span>⏱ timer running in background</span><span id="bgtime"></span></div>
+
+  <!-- CONTENT -->
+  <main id="content" tabindex="-1">
+    <div id="tab-today" role="region" aria-label="Today's study sessions"></div>
+  </main>
+
+  <!-- NAV -->
+  <nav id="nav" aria-label="Main navigation">
+    <button class="nbtn on" id="nb-today" onclick="UI.switchTab('today')" aria-current="page" aria-label="Today">TODAY</button>
+    <button class="nbtn" id="nb-chart" onclick="UI.switchTab('chart')" aria-label="Charts">CHART</button>
+    <button class="nbtn" id="nb-stats" onclick="UI.switchTab('stats')" aria-label="Stats">STATS</button>
+    <button class="nbtn" id="nb-lb" onclick="UI.switchTab('lb')" aria-label="Leaderboard">BOARD</button>
+  </nav>
+
+  <!-- SYNC MODAL -->
+  <div class="ov" id="sync-ov" role="dialog" aria-modal="true" aria-label="Sync settings">
+    <div class="ovsh">
+      <button class="ov-close" onclick="UI.closeSyncModal()" aria-label="Close">×</button>
+      <div class="ov-title">Sync &amp; Account</div>
+      <div class="sm-row">
+        <div class="sm-lbl">Display name</div>
+        <input class="sm-inp" id="sm-name" type="text" maxlength="20" placeholder="Your name" aria-label="Display name"/>
+      </div>
+      <div class="sm-row">
+        <div class="sm-lbl">Firebase API Key</div>
+        <input class="sm-inp" id="sm-api-key" type="password" placeholder="API Key" aria-label="Firebase API Key"/>
+      </div>
+      <div class="sm-row">
+        <div class="sm-lbl">Project ID</div>
+        <input class="sm-inp" id="sm-project-id" type="text" placeholder="my-project" aria-label="Project ID"/>
+      </div>
+      <div class="sm-btns">
+        <button class="sm-btn" onclick="UI.closeSyncModal()">Cancel</button>
+        <button class="sm-btn primary" onclick="FirebaseSync.save()">Save &amp; Sync</button>
+      </div>
+      <div class="sm-status" id="sm-status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- FIREBASE CONFIG -->
+  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js"></script>
+
+  <script>
+    // ════════════════════════════════════════════════════
+    // DATA / LOGIC LAYER (Modular State Management)
+    // ════════════════════════════════════════════════════
+    
+    class AppState {
+      static state = {
+        subjects: [],
+        log: {}, // { subject: seconds }
+        activeSubject: null,
+        liveTime: 0,
+        startTime: null,
+        adrenalineMode: false,
+        goalReached: false,
+        username: 'Anon',
+        theme: 'dark',
+        setupDone: false,
+      };
+
+      static init() {
+        const name = document.getElementById('setup-name').value.trim();
+        const apiKey = document.getElementById('setup-api-key').value.trim();
+        const projectId = document.getElementById('setup-project-id').value.trim();
+
+        if (!name) {
+          document.getElementById('setup-name').focus();
+          UI.showToast('Enter your name');
+          return;
+        }
+
+        this.state.username = name;
+        this.state.setupDone = true;
+        Storage.save('username', name);
+        Storage.save('setup_done', true);
+
+        if (apiKey && projectId) {
+          Storage.save('firebase_api_key', apiKey);
+          Storage.save('firebase_project_id', projectId);
+          FirebaseSync.init(apiKey, projectId);
+        }
+
+        document.getElementById('setup').classList.add('hidden');
+        this.loadLocalData();
+        UI.render();
+      }
+
+      static skipSetup() {
+        this.state.username = 'Anon';
+        this.state.setupDone = true;
+        Storage.save('username', 'Anon');
+        Storage.save('setup_done', true);
+        document.getElementById('setup').classList.add('hidden');
+        this.loadLocalData();
+        UI.render();
+      }
+
+      static loadLocalData() {
+        this.state.username = Storage.get('username', 'Anon');
+        this.state.theme = Storage.get('theme', 'dark');
+        this.state.log = Storage.get(`log:${this.todayKey()}`, {});
+        this.state.subjects = Storage.get('subjects_v2', []);
+      }
+
+      static todayKey() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+
+      static startSession(subjectName) {
+        this.state.activeSubject = subjectName;
+        this.state.startTime = Date.now();
+      }
+
+      static stopSession() {
+        if (this.state.activeSubject && this.state.startTime) {
+          const elapsed = Math.floor((Date.now() - this.state.startTime) / 1000);
+          this.state.log[this.state.activeSubject] = (this.state.log[this.state.activeSubject] || 0) + elapsed;
+          Storage.save(`log:${this.todayKey()}`, this.state.log);
+          FirebaseSync.pushData();
+        }
+        this.state.activeSubject = null;
+        this.state.startTime = null;
+        this.state.liveTime = 0;
+      }
+
+      static getTotalTime() {
+        let total = Object.values(this.state.log).reduce((a, b) => a + b, 0);
+        if (this.state.activeSubject && this.state.startTime) {
+          total += Math.floor((Date.now() - this.state.startTime) / 1000);
+        }
+        return total;
+      }
+    }
+
+    // ════════════════════════════════════════════════════
+    // STORAGE LAYER (LocalStorage abstraction)
+    // ════════════════════════════════════════════════════
+    
+    class Storage {
+      static get(key, fallback) {
+        try {
+          const val = localStorage.getItem(key);
+          return val ? JSON.parse(val) : fallback;
+        } catch {
+          return fallback;
+        }
+      }
+
+      static save(key, value) {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+          console.warn('Storage write fail:', key, e);
+        }
+      }
+
+      static remove(key) {
+        try {
+          localStorage.removeItem(key);
+        } catch {}
+      }
+    }
+
+    // ════════════════════════════════════════════════════
+    // FIREBASE SYNC LAYER (Firestore Integration)
+    // ════════════════════════════════════════════════════
+    
+    class FirebaseSync {
+      static db = null;
+      static auth = null;
+      static userId = null;
+      static initialized = false;
+      static unsubscribe = null;
+
+      static init(apiKey, projectId) {
+        try {
+          const config = {
+            apiKey: apiKey,
+            projectId: projectId,
+            storageBucket: `${projectId}.appspot.com`,
+            messagingSenderId: '000000000000',
+            appId: '1:000000000000:web:0000000000000000',
+          };
+
+          firebase.initializeApp(config);
+          this.db = firebase.firestore();
+          this.auth = firebase.auth();
+
+          // Enable offline persistence
+          this.db.enablePersistence().catch(err => {
+            if (err.code !== 'failed-precondition') {
+              console.warn('Offline persistence failed:', err);
+            }
+          });
+
+          // Anonymous auth
+          this.auth.signInAnonymously().then(() => {
+            this.userId = this.auth.currentUser.uid;
+            Storage.save('user_id', this.userId);
+            this.initialized = true;
+            UI.updateSyncStatus('synced');
+            this.pullData();
+            this.subscribeLB();
+          }).catch(err => {
+            console.warn('Auth failed:', err);
+            UI.updateSyncStatus('error');
+          });
+        } catch (e) {
+          console.warn('Firebase init error:', e);
+          UI.updateSyncStatus('error');
+        }
+      }
+
+      static async pullData() {
+        if (!this.db || !this.userId) return;
+        try {
+          const doc = await this.db.collection('users').doc(this.userId).get();
+          if (doc.exists) {
+            const data = doc.data();
+            // Merge remote data with local (local takes precedence)
+            if (data.log) {
+              const localLog = AppState.state.log;
+              AppState.state.log = { ...data.log, ...localLog };
+              Storage.save(`log:${AppState.todayKey()}`, AppState.state.log);
+            }
+            if (data.subjects) AppState.state.subjects = data.subjects;
+          }
+          UI.render();
+        } catch (e) {
+          console.warn('Pull failed:', e);
+        }
+      }
+
+      static async pushData() {
+        if (!this.db || !this.userId) return;
+        try {
+          UI.updateSyncStatus('syncing');
+          await this.db.collection('users').doc(this.userId).set({
+            username: AppState.state.username,
+            log: AppState.state.log,
+            subjects: AppState.state.subjects,
+            todayTotalSec: AppState.getTotalTime(),
+            updatedAt: new Date(),
+          }, { merge: true });
+          UI.updateSyncStatus('synced');
+        } catch (e) {
+          console.warn('Push failed:', e);
+          UI.updateSyncStatus('error');
+        }
+      }
+
+      static subscribeLB() {
+        if (!this.db) return;
+        try {
+          if (this.unsubscribe) this.unsubscribe();
+          this.unsubscribe = this.db.collection('leaderboard')
+            .orderBy('todayTotalSec', 'desc')
+            .limit(10)
+            .onSnapshot(() => {
+              if (AppState.state.tab === 'lb') UI.renderLB();
+            });
+        } catch (e) {
+          console.warn('LB subscribe failed:', e);
+        }
+      }
+
+      static save() {
+        const name = document.getElementById('sm-name').value.trim();
+        const apiKey = document.getElementById('sm-api-key').value.trim();
+        const projectId = document.getElementById('sm-project-id').value.trim();
+
+        if (name) AppState.state.username = name;
+        if (apiKey && projectId) {
+          Storage.save('firebase_api_key', apiKey);
+          Storage.save('firebase_project_id', projectId);
+          this.init(apiKey, projectId);
+        }
+        UI.closeSyncModal();
+      }
+    }
+
+    // ════════════════════════════════════════════════════
+    // VIEW / UI LAYER (Rendering + Interactions)
+    // ════════════════════════════════════════════════════
+    
+    class UI {
+      static currentTab = 'today';
+      static ticker = null;
+
+      static updateSyncStatus(state) {
+        const dot = document.getElementById('sync-dot');
+        const lbl = document.getElementById('sync-lbl');
+        if (!dot || !lbl) return;
+        dot.className = 'sdot ' + state;
+        const map = { synced: 'synced', syncing: 'syncing', error: 'error', offline: 'offline' };
+        lbl.textContent = map[state] || state;
+      }
+
+      static render() {
+        this.updateHeader();
+        this.renderToday();
+        this.startTicker();
+      }
+
+      static updateHeader() {
+        const d = new Date();
+        document.getElementById('hdate').textContent = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const timer = document.getElementById('htimer');
+        const total = AppState.getTotalTime();
+        const h = Math.floor(total / 3600);
+        const m = Math.floor((total % 3600) / 60);
+        const s = total % 60;
+        timer.textContent = `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+
+      static renderToday() {
+        const container = document.getElementById('tab-today');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (AppState.state.subjects.length === 0) {
+          container.innerHTML = '<div style="text-align:center;color:var(--t3);margin-top:40px;font-size:11px;letter-spacing:.15em">No subjects yet. Add one in settings.</div>';
+          return;
+        }
+
+        AppState.state.subjects.forEach(subject => {
+          const seconds = AppState.state.log[subject.name] || 0;
+          const isActive = AppState.state.activeSubject === subject.name;
+          const row = document.createElement('div');
+          row.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 17px 24px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background-color 0.2s var(--motion);
+          `;
+          row.style.backgroundColor = isActive ? 'var(--bg2)' : 'transparent';
+          row.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 13px;">
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: ${subject.color};"></div>
+              <div style="font-size: 14px; color: ${isActive ? 'var(--t1)' : 'var(--t3)'}; font-weight: ${isActive ? '600' : '400'};">${subject.name}</div>
+            </div>
+            <div style="font-size: 14px; color: var(--t4); font-variant-numeric: tabular-nums;">${this.formatTime(seconds)}</div>
+          `;
+          row.onclick = () => {
+            if (isActive) {
+              AppState.stopSession();
+            } else {
+              AppState.state.subjects.forEach(s => {
+                if (AppState.state.activeSubject === s.name) AppState.stopSession();
+              });
+              AppState.startSession(subject.name);
+            }
+            this.render();
+          };
+          container.appendChild(row);
+        });
+      }
+
+      static formatTime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        return h > 0 ? `${h}h ${m}m` : `${m}m`;
+      }
+
+      static renderLB() {
+        // Placeholder leaderboard
+      }
+
+      static switchTab(tab) {
+        this.currentTab = tab;
+        if (tab === 'today') this.render();
+      }
+
+      static openSyncModal() {
+        document.getElementById('sm-name').value = AppState.state.username;
+        document.getElementById('sm-api-key').value = Storage.get('firebase_api_key', '');
+        document.getElementById('sm-project-id').value = Storage.get('firebase_project_id', '');
+        document.getElementById('sm-status').textContent = '';
+        document.getElementById('sync-ov').classList.add('show');
+        setTimeout(() => document.getElementById('sm-name').focus(), 80);
+      }
+
+      static closeSyncModal() {
+        document.getElementById('sync-ov').classList.remove('show');
+      }
+
+      static showToast(msg, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+          toast.classList.add('exiting');
+          setTimeout(() => toast.remove(), 300);
+        }, 2500);
+      }
+
+      static toggleTheme() {
+        const html = document.documentElement;
+        const isLight = html.classList.contains('light');
+        html.classList.toggle('light');
+        Storage.save('theme', isLight ? 'dark' : 'light');
+      }
+
+      static startTicker() {
+        if (this.ticker) clearInterval(this.ticker);
+        this.ticker = setInterval(() => this.updateHeader(), 1000);
+      }
+    }
+
+    // ════════════════════════════════════════════════════
+    // INITIALIZATION
+    // ════════════════════════════════════════════════════
+    
+    window.addEventListener('DOMContentLoaded', () => {
+      const setupDone = Storage.get('setup_done', false);
+      if (setupDone) {
+        AppState.loadLocalData();
+        const apiKey = Storage.get('firebase_api_key', null);
+        const projectId = Storage.get('firebase_project_id', null);
+        if (apiKey && projectId) {
+          FirebaseSync.init(apiKey, projectId);
+        }
+        document.getElementById('setup').classList.add('hidden');
+        UI.render();
+      }
+    });
+
+    // Service worker registration for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+    }
+  </script>
+</body>
+</html>
