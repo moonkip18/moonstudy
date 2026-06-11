@@ -1229,37 +1229,29 @@ function initApp(){
   setInterval(()=>{checkDayRollover();},60000);
   render();
 
-  // Init Firebase after local state is ready
-  try{
-    firebase.initializeApp(firebaseConfig);
-    db=firebase.firestore();
-    db.enablePersistence().catch((err)=>{
-      if(err.code==='failed-precondition'){console.warn('Persistence: multiple tabs');}
-      else if(err.code==='unimplemented'){console.warn('Persistence not supported');}
-    });
-    authInitialized=true;
-
-    /* CHANGED: Handle Google redirect result after page reload */
-    firebase.auth().getRedirectResult().then(result => {
-      if(result.user){
-        onAuthSuccess(result.user);
-      } else {
-        // No pending redirect; check if already signed in (e.g., from previous session)
-        const currentUser = firebase.auth().currentUser;
-        if(currentUser){
-          onAuthSuccess(currentUser);
-        }
-        // Otherwise login screen stays visible
-      }
-    }).catch(e => {
-      console.warn('Redirect sign-in error', e);
-      showLoginError('Sign-in failed. Please try again.');
-    });
-  }catch(e){
-    console.warn('Firebase init error:',e);
-    setSyncStatus('offline');
+ // Enable offline persistence
+db.enablePersistence().catch((err) => {
+  if (err.code === 'failed-precondition') {
+    console.warn('Persistence: multiple tabs');
   }
-}
+});
+
+// Handle Google/Apple redirect result after login
+firebase.auth().getRedirectResult().then(result => {
+  if (result.user) {
+    onAuthSuccess(result.user);
+  }
+}).catch(e => {
+  console.warn('Redirect error:', e);
+});
+
+// Persist login across page refreshes
+firebase.auth().onAuthStateChanged(user => {
+  if (user && !document.getElementById('login-screen').classList.contains('hidden')) {
+    onAuthSuccess(user);
+  }
+});
+
   // ════════════════════════════════════════════════════
 // KEYBOARD NAVIGATION (unchanged)
 // ════════════════════════════════════════════════════
