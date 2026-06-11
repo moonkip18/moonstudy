@@ -622,18 +622,34 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 </div>
 
 <script>
-// ════════════════════════════════════════════════════
-// FIREBASE CONFIG — replace with your own
-// ════════════════════════════════════════════════════
+// ═══════════════ FIREBASE INIT ═══════════════
 const firebaseConfig = {
   apiKey: "AIzaSyA9xk2rDZXE9Ro2hbIqfkZwMmQwgY7S3LM",
   authDomain: "deadlines---study-tracker.firebaseapp.com",
   projectId: "deadlines---study-tracker",
   storageBucket: "deadlines---study-tracker.firebasestorage.app",
   messagingSenderId: "679495334937",
-  appId: "1:679495334937:web:9c7cc579bef986542f3e88",
-  measurementId: "G-E6187M99C2"
+  appId: "1:679495334937:web:9c7cc579bef986542f3e88"
 };
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Initialize services
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// Enable offline persistence
+db.enablePersistence().catch((err) => {
+  if (err.code === 'failed-precondition') {
+    console.warn('Offline persistence failed: multiple tabs open');
+  } else if (err.code === 'unimplemented') {
+    console.warn('Offline persistence not supported in this browser');
+  }
+});
+
+console.log('Firebase initialized successfully');
+</script>
 
 // ════════════════════════════════════════════════════
 // CONSTANTS
