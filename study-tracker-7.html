@@ -12,6 +12,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Study">
 <title>Study</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <style>
 /* ── TOKENS ─────────────────────────────────────── */
 :root{
@@ -403,21 +406,13 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
     <input class="setup-inp" id="setup-name" type="text" placeholder="e.g. Alex" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Display name"/>
   </div>
   <div class="setup-section">
-    <div class="setup-lbl">Supabase URL <span style="color:var(--t5)">(optional — for sync &amp; leaderboard)</span></div>
-    <input class="setup-inp" id="setup-url" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false" aria-label="Supabase URL"/>
-    <div class="setup-lbl" style="margin-top:10px;">Supabase Anon Key</div>
-    <input class="setup-inp" id="setup-key" type="password" placeholder="eyJhbGci..." autocomplete="off" spellcheck="false" aria-label="Supabase anon key"/>
     <div class="setup-hint">
-      Free at <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> — create a project, copy the URL and anon key from Project Settings → API. Leave blank to use this app offline only.
+      Firebase sync is configured via the firebaseConfig in the source code. Update it with your own Firebase project credentials.
       <br><br>
-      After creating your project, run this SQL in the Supabase SQL editor:<br>
+      Create a project at <a href="https://console.firebase.google.com" target="_blank" rel="noopener">Firebase Console</a>, enable Firestore, and copy your config object into the script.
+      <br><br>
       <span style="color:var(--t4);font-family:monospace;font-size:8px;word-break:break-all;">
-        create table study_sync(id text primary key,payload jsonb,updated_at timestamptz default now());
-        create table leaderboard(user_id text primary key,username text,today_sec int default 0,week_sec int default 0,alltime_sec int default 0,updated_at timestamptz default now());
-        alter table study_sync enable row level security;
-        alter table leaderboard enable row level security;
-        create policy "allow all" on study_sync for all using(true) with check(true);
-        create policy "allow all" on leaderboard for all using(true) with check(true);
+        Required: Firestore Database in production mode. Collections used: study_data (doc per user), leaderboard (doc per user).
       </span>
     </div>
   </div>
@@ -513,13 +508,9 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
       <div class="sm-lbl">Display name</div>
       <input class="sm-inp" id="sm-name" type="text" maxlength="20" placeholder="Your name" aria-label="Display name"/>
     </div>
-    <div class="sm-row">
-      <div class="sm-lbl">Supabase URL</div>
-      <input class="sm-inp" id="sm-url" type="url" placeholder="https://xxxx.supabase.co" aria-label="Supabase URL"/>
-    </div>
-    <div class="sm-row">
-      <div class="sm-lbl">Anon Key</div>
-      <input class="sm-inp" id="sm-key" type="password" placeholder="eyJhbGci..." aria-label="Anon key"/>
+    <div class="sm-hint" style="margin-bottom:8px;">
+      Firebase sync is configured in the source code (firebaseConfig). Update it with your own project credentials.
+      Leave as-is to use offline mode.
     </div>
     <div class="sm-btns">
       <button class="sm-btn" onclick="closeSyncModal()">Cancel</button>
@@ -570,6 +561,18 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 
 <script>
 // ════════════════════════════════════════════════════
+// FIREBASE CONFIG — replace with your own
+// ════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// ════════════════════════════════════════════════════
 // CONSTANTS
 // ════════════════════════════════════════════════════
 const PAL=['#C8FF00','#00D4FF','#FF7055','#FF9F40','#C084FC','#34D399','#F472B6','#60A5FA','#FBBF24','#A78BFA','#FB923C','#2DD4BF'];
@@ -598,9 +601,8 @@ let pomoRound=0;
 let sessEditTarget=null; // {dateKey,idx} or null for new
 let _rafPending=false,_lsWriteQ={};
 let _domCache={};
-let supabase=null; // supabase client instance
+let db=null; // firestore instance
 let syncUserId=null,syncUsername='';
-let _lbChannel=null;
 
 // ════════════════════════════════════════════════════
 // STORAGE — throttled + safe
@@ -643,8 +645,6 @@ window.addEventListener('beforeunload',()=>{
     try{localStorage.setItem('log:'+todayKey(),JSON.stringify(currentLog));
         localStorage.setItem('_t0',JSON.stringify(t0));
         localStorage.setItem('_active',JSON.stringify(active));}catch{}
-    // Best-effort beacon to supabase
-    if(supabase&&syncUserId)syncPushBeacon();
   }
 });
 
@@ -667,11 +667,8 @@ function announce(msg){const el=document.getElementById('a11y-live');if(el)el.te
 // ════════════════════════════════════════════════════
 function setupSave(){
   const name=document.getElementById('setup-name').value.trim();
-  const url=document.getElementById('setup-url').value.trim();
-  const key=document.getElementById('setup-key').value.trim();
   if(!name){document.getElementById('setup-name').focus();showToast('Enter your name');return;}
   ssNow('username',name); ssNow('setup_done',true);
-  if(url&&key){ssNow('sb_url',url);ssNow('sb_key',key);}
   document.getElementById('setup').classList.add('hidden');
   initApp();
 }
@@ -682,49 +679,54 @@ function setupSkip(){
 }
 
 // ════════════════════════════════════════════════════
-// SUPABASE SYNC
+// FIREBASE SYNC
 // ════════════════════════════════════════════════════
-function initSupabase(){
-  const url=ls('sb_url',null),key=ls('sb_key',null);
-  if(!url||!key){setSyncStatus('offline');return;}
+function initFirebase(){
   try{
-    // Load supabase-js from CDN
-    if(typeof window.supabaseLib==='undefined'){
-      const s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
-      s.onload=()=>{
-        supabase=window.supabaseLib.createClient(url,key);
-        syncUserId=ls('user_id',null);
-        syncUsername=ls('username','Anon');
-        if(!syncUserId){syncUserId=crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2);ssNow('user_id',syncUserId);}
-        setSyncStatus('syncing');
-        syncPull().then(()=>{
-          setSyncStatus('synced');
-          subscribeLeaderboard();
-          // Push every 30s (battery friendly)
-          setInterval(()=>{if(document.visibilityState==='visible')syncPush();},30000);
-        }).catch(()=>setSyncStatus('error'));
-      };
-      s.onerror=()=>setSyncStatus('error');
-      document.head.appendChild(s);
-    }else{
-      supabase=window.supabaseLib.createClient(url,key);
-      syncUserId=ls('user_id',null);
-      syncUsername=ls('username','Anon');
-      if(!syncUserId){syncUserId=crypto.randomUUID();ssNow('user_id',syncUserId);}
-      setSyncStatus('syncing');
-      syncPull().then(()=>{setSyncStatus('synced');subscribeLeaderboard();
-        setInterval(()=>{if(document.visibilityState==='visible')syncPush();},30000);
-      }).catch(()=>setSyncStatus('error'));
-    }
-  }catch(e){setSyncStatus('error');console.warn('Supabase init',e);}
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    syncUserId=ls('user_id',null);
+    syncUsername=ls('username','Anon');
+    if(!syncUserId){syncUserId=crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2);ssNow('user_id',syncUserId);}
+    setSyncStatus('syncing');
+
+    // Real-time listener: remote changes merge into local state
+    db.collection('study_data').doc(syncUserId).onSnapshot((doc)=>{
+      if(doc.exists){
+        const data=doc.data();
+        if(data&&data.payload){
+          mergePayload(data.payload);
+          subjects=ls('subjects_v2',subjects);
+          log=ls('log:'+todayKey(),{});
+          goalReached=ls('gr:'+todayKey(),false);
+          adrMode=goalReached&&total()>=ggs();
+          render();
+        }
+      }
+      setSyncStatus('synced');
+    },(error)=>{
+      setSyncStatus('error');
+      console.warn('Firestore listener error',error);
+    });
+
+    // Leaderboard real-time listener
+    db.collection('leaderboard').onSnapshot(()=>{
+      if(tab==='lb')renderLB();
+    },(error)=>{console.warn('LB listener error',error);});
+
+    // Initial sync push
+    syncToFirestore(buildPayload());
+
+    // Push every 30s (battery friendly)
+    setInterval(()=>{if(document.visibilityState==='visible')syncToFirestore(buildPayload());},30000);
+  }catch(e){setSyncStatus('error');console.warn('Firebase init',e);}
 }
 
 function buildPayload(){
   const obj={};
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
-    if(k&&!k.startsWith('_')&&k!=='sb_url'&&k!=='sb_key'&&k!=='snd_vol'&&k!=='snd_open'&&k!=='snd_last'&&k!=='setup_done'){
+    if(k&&!k.startsWith('_')&&k!=='snd_vol'&&k!=='snd_open'&&k!=='snd_last'&&k!=='setup_done'){
       try{obj[k]=JSON.parse(localStorage.getItem(k));}catch{obj[k]=localStorage.getItem(k);}
     }
   }
@@ -752,62 +754,35 @@ function mergePayload(remote){
   });
 }
 
-async function syncPull(){
-  if(!supabase||!syncUserId)return;
-  try{
-    const{data,error}=await supabase.from('study_sync').select('payload').eq('id',syncUserId).maybeSingle();
-    if(error)throw error;
-    if(data?.payload){
-      mergePayload(data.payload);
-      subjects=ls('subjects_v2',subjects);
-      log=ls('log:'+todayKey(),{});
-      goalReached=ls('gr:'+todayKey(),false);
-      adrMode=goalReached&&total()>=ggs();
-      render();
-    }
-  }catch(e){throw e;}
-}
-
-async function syncPush(){
-  if(!supabase||!syncUserId)return;
-  try{
-    setSyncStatus('syncing');
-    const payload=buildPayload();
-    const{error}=await supabase.from('study_sync').upsert({id:syncUserId,payload,updated_at:new Date().toISOString()});
-    if(error)throw error;
-    // Also update leaderboard
-    await pushLeaderboard();
+function syncToFirestore(payload){
+  if(!db||!syncUserId)return;
+  setSyncStatus('syncing');
+  db.collection('study_data').doc(syncUserId).set({
+    payload:payload,
+    updated_at:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=>{
     setSyncStatus('synced');
-  }catch(e){setSyncStatus('error');console.warn('sync push',e);}
+    pushLeaderboardFirestore();
+  }).catch((e)=>{setSyncStatus('error');console.warn('Firestore sync',e);});
 }
 
-function syncPushBeacon(){
-  // Use sendBeacon for tab-close reliability
-  if(!supabase||!syncUserId)return;
-  // Can't use supabase client in beacon, just queue a normal push
-  syncPush().catch(()=>{});
-}
-
-async function pushLeaderboard(){
-  if(!supabase||!syncUserId)return;
+async function pushLeaderboardFirestore(){
+  if(!db||!syncUserId)return;
   try{
     const todaySec=Object.values(ls('log:'+todayKey(),{})).reduce((a,b)=>a+b,0)+(active?live:0);
     let weekSec=0;
     for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);weekSec+=Object.values(ls('log:'+dkeyFor(d),{})).reduce((a,b)=>a+b,0);}
     weekSec+=active?live:0;
     const alltimeSec=allTimeSec();
-    await supabase.from('leaderboard').upsert({user_id:syncUserId,username:syncUsername,today_sec:todaySec,week_sec:weekSec,alltime_sec:alltimeSec,updated_at:new Date().toISOString()});
-  }catch{}
-}
-
-function subscribeLeaderboard(){
-  if(!supabase)return;
-  try{
-    if(_lbChannel)supabase.removeChannel(_lbChannel);
-    _lbChannel=supabase.channel('leaderboard-changes').on('postgres_changes',{event:'*',schema:'public',table:'leaderboard'},()=>{
-      if(tab==='lb')renderLB();
-    }).subscribe();
-  }catch{}
+    await db.collection('leaderboard').doc(syncUserId).set({
+      user_id:syncUserId,
+      username:syncUsername,
+      today_sec:todaySec,
+      week_sec:weekSec,
+      alltime_sec:alltimeSec,
+      updated_at:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }catch(e){console.warn('LB push',e);}
 }
 
 function setSyncStatus(state){
@@ -820,8 +795,6 @@ function setSyncStatus(state){
 
 function openSyncModal(){
   document.getElementById('sm-name').value=ls('username','');
-  document.getElementById('sm-url').value=ls('sb_url','');
-  document.getElementById('sm-key').value=ls('sb_key','');
   document.getElementById('sm-status').textContent='';
   document.getElementById('sync-ov').classList.add('show');
   setTimeout(()=>document.getElementById('sm-name').focus(),80);
@@ -829,13 +802,13 @@ function openSyncModal(){
 function closeSyncModal(){document.getElementById('sync-ov').classList.remove('show');}
 async function smSave(){
   const name=document.getElementById('sm-name').value.trim();
-  const url=document.getElementById('sm-url').value.trim();
-  const key=document.getElementById('sm-key').value.trim();
   const st=document.getElementById('sm-status');
   if(name){ssNow('username',name);syncUsername=name;}
-  if(url&&key){ssNow('sb_url',url);ssNow('sb_key',key);st.textContent='Connecting…';st.className='sm-status';}
   closeSyncModal();
-  initSupabase();
+  if(db){
+    st.textContent='Connecting…';st.className='sm-status';
+    syncToFirestore(buildPayload());
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -1110,7 +1083,7 @@ function initApp(){
   setInterval(()=>{checkDayRollover();},60000);
 
   render();
-  initSupabase();
+  initFirebase();
 }
 
 // ════════════════════════════════════════════════════
@@ -1332,7 +1305,7 @@ function stopTimer(){
   document.title='Study';
   announce('Stopped: '+stopped+' — '+fmt(added)+' logged');
   updateBgBar();
-  if(supabase)syncPush().catch(()=>{});
+  syncToFirestore(buildPayload());
   render();
 }
 
@@ -1383,7 +1356,7 @@ function saveSessModal(){
     log[sub]=(log[sub]||0)+dur;ssNow('log:'+todayKey(),log);
   }
   closeSessModal();render();
-  if(supabase)syncPush().catch(()=>{});
+  syncToFirestore(buildPayload());
 }
 function deleteSess(dateKey,idx){
   const sess=ls('sessions:'+dateKey,[]);const s=sess[idx];if(!s)return;
@@ -1565,8 +1538,8 @@ function buildPeakSVG(hd){
 // ════════════════════════════════════════════════════
 async function renderLB(){
   const el=document.getElementById('tab-lb');
-  if(!supabase){
-    el.innerHTML=`<div class="lb-empty">Connect Supabase to see the leaderboard.<br><br><button class="ebtn" onclick="openSyncModal()" style="margin-top:12px">Set up sync</button></div>`;
+  if(!db){
+    el.innerHTML=`<div class="lb-empty">Configure Firebase to see the leaderboard.<br><br><button class="ebtn" onclick="openSyncModal()" style="margin-top:12px">Set up sync</button></div>`;
     return;
   }
   el.innerHTML=`<div class="lb-header"><div class="lbl" style="margin:0">Leaderboard</div><div class="lb-live"><div class="lb-dot on" aria-hidden="true"></div><span>live</span></div></div>
@@ -1576,9 +1549,9 @@ async function renderLB(){
   <div id="lb-list" aria-live="polite"><div class="lb-empty" role="status">Loading…</div></div>`;
   try{
     const col=lbRange==='today'?'today_sec':lbRange==='week'?'week_sec':'alltime_sec';
-    const{data,error}=await supabase.from('leaderboard').select('*').order(col,{ascending:false}).limit(50);
-    if(error)throw error;
-    if(!data||!data.length){document.getElementById('lb-list').innerHTML='<div class="lb-empty">No data yet — start studying!</div>';return;}
+    const snapshot=await db.collection('leaderboard').orderBy(col,'desc').limit(50).get();
+    if(snapshot.empty){document.getElementById('lb-list').innerHTML='<div class="lb-empty">No data yet — start studying!</div>';return;}
+    const data=snapshot.docs.map(doc=>doc.data());
     const maxSec=data[0][col]||1;
     const rows=data.map((row,i)=>{
       const sec=row[col]||0;const isMe=row.user_id===syncUserId;
@@ -1594,7 +1567,7 @@ async function renderLB(){
       </div>`;
     }).join('');
     document.getElementById('lb-list').innerHTML=`<div role="list">${rows}</div>`;
-  }catch(e){document.getElementById('lb-list').innerHTML='<div class="lb-empty">Failed to load. Check your Supabase connection.</div>';console.warn('lb fetch',e);}
+  }catch(e){document.getElementById('lb-list').innerHTML='<div class="lb-empty">Failed to load. Check your Firebase connection.</div>';console.warn('lb fetch',e);}
 }
 
 // ════════════════════════════════════════════════════
@@ -1696,8 +1669,8 @@ function renderSettings(){
         <input class="set-inp" type="text" value="${syncUsername}" maxlength="20" onblur="updateUsername(this.value)" aria-label="Username"/>
       </div>
       <div class="set-row" style="flex-direction:column;align-items:flex-start;gap:8px">
-        <div class="set-key">Supabase connection</div>
-        <button class="ebtn" style="width:100%" onclick="openSyncModal()">Configure sync</button>
+        <div class="set-key">Firebase connection</div>
+        <button class="ebtn" style="width:100%" onclick="openSyncModal()">Sync status</button>
       </div>
     </div>
     <div class="set-sec">
@@ -1723,7 +1696,7 @@ function toggleReduceMotion(on){
   else{const s=document.getElementById('rm-style');if(s)s.remove();}
   announce(on?'Reduce motion on':'Reduce motion off');
 }
-function updateUsername(val){const v=val.trim();if(!v)return;syncUsername=v;ssNow('username',v);if(supabase)pushLeaderboard().catch(()=>{});}
+function updateUsername(val){const v=val.trim();if(!v)return;syncUsername=v;ssNow('username',v);if(db)pushLeaderboardFirestore().catch(()=>{});}
 function confirmReset(){if(confirm('Delete ALL study data? This cannot be undone.'))resetData();}
 function resetData(){if(active)stopTimer();localStorage.clear();location.reload();}
 
