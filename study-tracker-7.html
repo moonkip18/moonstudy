@@ -9,6 +9,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="theme-color" content="#080808" id="theme-meta">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Study">
 <title>Study</title>
@@ -41,6 +42,45 @@ body{background:var(--bg);color:var(--t1);font-family:ui-monospace,'SF Mono','Co
 /* ── SKIP LINK ───────────────────────────────────── */
 .skip-link{position:absolute;top:-40px;left:0;background:var(--acc);color:#000;padding:8px 14px;font-size:12px;z-index:9999;border-radius:0 0 8px 0;transition:top .2s;}
 .skip-link:focus{top:0;}
+
+/* ── LOGIN SCREEN ────────────────────────────────── */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;}
+#login-screen.hidden{display:none;}
+.login-logo{font-size:36px;letter-spacing:-2px;color:var(--t1);margin-bottom:4px;font-weight:700;}
+.login-tagline{font-size:10px;color:var(--t3);letter-spacing:.3em;text-transform:uppercase;margin-bottom:48px;}
+.login-divider{display:flex;align-items:center;width:100%;max-width:320px;margin:24px 0;gap:12px;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border2);}
+.login-divider span{font-size:8px;color:var(--t4);letter-spacing:.2em;text-transform:uppercase;}
+.login-btn{width:100%;max-width:320px;padding:14px;border-radius:12px;font-size:13px;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),opacity 0.2s;border:none;letter-spacing:.04em;margin-bottom:10px;}
+.login-btn:active{transform:scale(0.98);opacity:0.9;}
+.login-btn:focus{outline:none;box-shadow:var(--focus-ring);}
+.login-btn.google{background:#ffffff;color:#1a1a1a;border:1px solid #e0e0e0;}
+.login-btn.google:hover{background:#f5f5f5;}
+.login-btn.apple{background:#000000;color:#ffffff;border:1px solid #333;}
+.login-btn.apple:hover{background:#1a1a1a;}
+.login-btn.anonymous{background:transparent;color:var(--t2);border:1px solid var(--border2);font-size:11px;}
+.login-btn.anonymous:hover{background:var(--bg2);color:var(--t1);}
+.login-btn svg{width:18px;height:18px;flex-shrink:0;}
+.login-spinner{width:16px;height:16px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:lspin 0.6s linear infinite;display:none;}
+.login-btn.loading .login-spinner{display:inline-block;}
+.login-btn.loading .login-btn-text{opacity:0.5;}
+@keyframes lspin{to{transform:rotate(360deg);}}
+.login-error{font-size:9px;color:#FF5555;letter-spacing:.1em;text-align:center;margin-top:12px;min-height:14px;}
+.login-footer{font-size:8px;color:var(--t5);letter-spacing:.15em;text-align:center;margin-top:auto;padding-bottom:20px;}
+
+/* ── DISPLAY NAME MODAL ──────────────────────────── */
+.name-modal{position:fixed;inset:0;background:#000000bb;z-index:2100;display:none;align-items:center;justify-content:center;padding:24px;}
+.name-modal.show{display:flex;}
+.name-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:28px 24px;width:100%;max-width:360px;}
+.name-title{font-size:12px;color:var(--t1);letter-spacing:.05em;margin-bottom:6px;font-weight:600;}
+.name-subtitle{font-size:9px;color:var(--t4);letter-spacing:.08em;margin-bottom:20px;}
+.name-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--t1);font-size:13px;font-family:inherit;padding:12px 14px;outline:none;margin-bottom:16px;autocapitalize:off;autocomplete:off;spellcheck:false;}
+.name-input:focus{border-color:var(--acc);box-shadow:var(--focus-ring);}
+.name-buttons{display:flex;gap:8px;}
+.name-btn{flex:1;padding:11px;border-radius:10px;font-size:12px;font-family:inherit;cursor:pointer;letter-spacing:.06em;border:1px solid var(--border2);background:var(--bg3);color:var(--t3);transition:transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);}
+.name-btn:focus{outline:none;box-shadow:var(--focus-ring);}
+.name-btn:active{transform:scale(0.98);}
+.name-btn.primary{background:var(--acc);color:#000;border-color:var(--acc);font-weight:600;}
 
 /* ── HEADER ──────────────────────────────────────── */
 #bgbar{display:none;background:var(--bg3);border-bottom:1px solid var(--border);padding:5px 24px;font-size:9px;color:var(--t3);letter-spacing:.18em;text-transform:uppercase;flex-shrink:0;align-items:center;justify-content:space-between;}
@@ -401,18 +441,44 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 <a class="skip-link" href="#content">Skip to content</a>
 <span class="sr-only" aria-live="polite" id="a11y-live"></span>
 
-<!-- DISPLAY NAME MODAL (first time) -->
-<div class="ov" id="name-ov" role="dialog" aria-modal="true" aria-label="Set display name">
-  <div class="ovsh">
-    <button class="ov-close" onclick="skipName()" aria-label="Close and skip">×</button>
-    <div class="ov-title">Welcome</div>
-    <div class="sess-edit-row">
-      <div class="sess-edit-lbl">Display Name</div>
-      <input class="sess-edit-inp" id="name-inp" type="text" maxlength="20" placeholder="e.g. Alex" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="Display name"/>
-    </div>
-    <div class="sm-btns">
-      <button class="sm-btn" onclick="skipName()">Skip</button>
-      <button class="sm-btn primary" onclick="saveName()">Save</button>
+<!-- LOGIN SCREEN -->
+<div id="login-screen" role="dialog" aria-modal="true" aria-label="Sign in to Study">
+  <div class="login-logo" aria-hidden="true">Study</div>
+  <div class="login-tagline">Track your focus</div>
+  
+  <button class="login-btn google" id="btn-google" onclick="signInWithGoogle()">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    <span class="login-btn-text">Continue with Google</span>
+    <div class="login-spinner"></div>
+  </button>
+  
+  <button class="login-btn apple" id="btn-apple" onclick="signInWithApple()">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+    <span class="login-btn-text">Continue with Apple</span>
+    <div class="login-spinner"></div>
+  </button>
+  
+  <div class="login-divider"><span>or</span></div>
+  
+  <button class="login-btn anonymous" id="btn-anon" onclick="signInAnonymously()">
+    <span class="login-btn-text">Continue without account</span>
+    <div class="login-spinner"></div>
+  </button>
+  
+  <div class="login-error" id="login-error" aria-live="polite"></div>
+  
+  <div class="login-footer">Your data syncs securely via Firebase</div>
+</div>
+
+<!-- DISPLAY NAME MODAL -->
+<div class="name-modal" id="name-modal" role="dialog" aria-modal="true" aria-label="Set your display name">
+  <div class="name-card">
+    <div class="name-title">Welcome to Study</div>
+    <div class="name-subtitle">Choose a display name for the leaderboard</div>
+    <input class="name-input" id="name-inp" type="text" maxlength="20" placeholder="e.g. Alex" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="Display name"/>
+    <div class="name-buttons">
+      <button class="name-btn" onclick="skipName()">Skip</button>
+      <button class="name-btn primary" onclick="saveName()">Let's go →</button>
     </div>
   </div>
 </div>
@@ -595,11 +661,12 @@ let sndVol=0.6,sndOpen=false;
 let pomoRunning=false,pomoPhase='work',pomoRemain=0,pomoTicker=null;
 let pomoCfg={work:25,shortBreak:5,longBreak:15,rounds:4};
 let pomoRound=0;
-let sessEditTarget=null; // {dateKey,idx} or null for new
+let sessEditTarget=null;
 let _rafPending=false,_lsWriteQ={};
 let _domCache={};
-let db=null; // firestore instance
+let db=null;
 let syncUserId=null,syncUsername='';
+let authInitialized=false;
 
 // ════════════════════════════════════════════════════
 // STORAGE — throttled + safe
@@ -612,7 +679,6 @@ function ls(k,fb){
   try{const v=JSON.parse(localStorage.getItem(k));return v!=null?v:fb;}catch{return fb;}
 }
 
-// Throttled localStorage writes — queue and flush via setTimeout
 const _lsQueue={};let _lsTimer=null;
 function ss(k,v){
   _lsQueue[k]=JSON.stringify(v);
@@ -626,16 +692,13 @@ function _flushLS(){
   }
 }
 function ssNow(k,v){
-  // Immediate write for critical data (timer start/stop, page unload)
   delete _lsQueue[k];
   try{localStorage.setItem(k,JSON.stringify(v));}catch{}
 }
 
-// Tab close / navigation safety — beacon critical timer state
 window.addEventListener('beforeunload',()=>{
-  _flushLS(); // flush queue
+  _flushLS();
   if(active&&t0){
-    // Save current live progress before close
     const added=Math.floor((Date.now()-t0)/1000);
     const currentLog=ls('log:'+todayKey(),{});
     currentLog[active]=(currentLog[active]||0)+added;
@@ -660,90 +723,164 @@ const ssec=name=>active===name?(log[name]||0)+live:(log[name]||0);
 function announce(msg){const el=document.getElementById('a11y-live');if(el)el.textContent=msg;}
 
 // ════════════════════════════════════════════════════
-// FIREBASE SYNC (single source of truth)
+// AUTHENTICATION FLOW
 // ════════════════════════════════════════════════════
-let _syncTimeout = null;
-function queueSync() {
-  if (!_syncTimeout) {
-    _syncTimeout = setTimeout(() => {
+function setLoginLoading(btnId, loading){
+  const btn=document.getElementById(btnId);
+  if(btn)btn.classList.toggle('loading',loading);
+  document.querySelectorAll('.login-btn').forEach(b=>b.disabled=loading);
+}
+
+function showLoginError(msg){
+  const el=document.getElementById('login-error');
+  if(el)el.textContent=msg;
+  setTimeout(()=>{if(el)el.textContent='';},5000);
+}
+
+function onAuthSuccess(user){
+  syncUserId=user.uid;
+  ssNow('user_id',syncUserId);
+  syncUsername=ls('username','');
+  
+  document.getElementById('login-screen').classList.add('hidden');
+  
+  if(!syncUsername){
+    showNameModal();
+  }else{
+    completeAuthSetup();
+  }
+}
+
+function completeAuthSetup(){
+  initFirebase();
+}
+
+async function signInWithGoogle(){
+  showLoginError('');
+  setLoginLoading('btn-google',true);
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    const result=await firebase.auth().signInWithPopup(provider);
+    onAuthSuccess(result.user);
+  }catch(e){
+    console.warn('Google sign-in:',e);
+    if(e.code==='auth/popup-closed-by-user'){
+      // user closed popup, do nothing
+    }else{
+      showLoginError('Google sign-in failed. Check console.');
+    }
+  }finally{
+    setLoginLoading('btn-google',false);
+  }
+}
+
+async function signInWithApple(){
+  showLoginError('');
+  setLoginLoading('btn-apple',true);
+  try{
+    const provider=new firebase.auth.OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    const result=await firebase.auth().signInWithPopup(provider);
+    onAuthSuccess(result.user);
+  }catch(e){
+    console.warn('Apple sign-in:',e);
+    if(e.code==='auth/popup-closed-by-user'){
+      // user closed popup, do nothing
+    }else{
+      showLoginError('Apple sign-in failed. Check console.');
+    }
+  }finally{
+    setLoginLoading('btn-apple',false);
+  }
+}
+
+async function signInAnonymously(){
+  showLoginError('');
+  setLoginLoading('btn-anon',true);
+  try{
+    const result=await firebase.auth().signInAnonymously();
+    onAuthSuccess(result.user);
+  }catch(e){
+    console.warn('Anonymous sign-in:',e);
+    showLoginError('Sign-in failed. Check your connection.');
+  }finally{
+    setLoginLoading('btn-anon',false);
+  }
+}
+
+// ════════════════════════════════════════════════════
+// NAME MODAL
+// ════════════════════════════════════════════════════
+function showNameModal(){
+  document.getElementById('name-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('name-inp').focus(),100);
+}
+
+function saveName(){
+  const name=document.getElementById('name-inp').value.trim()||'Anon';
+  syncUsername=name;
+  ssNow('username',name);
+  document.getElementById('name-modal').classList.remove('show');
+  completeAuthSetup();
+  if(db)pushLeaderboardFirestore().catch(()=>{});
+}
+
+function skipName(){
+  syncUsername='Anon';
+  ssNow('username','Anon');
+  document.getElementById('name-modal').classList.remove('show');
+  completeAuthSetup();
+}
+
+// ════════════════════════════════════════════════════
+// FIREBASE SYNC
+// ════════════════════════════════════════════════════
+let _syncTimeout=null;
+function queueSync(){
+  if(!_syncTimeout){
+    _syncTimeout=setTimeout(()=>{
       syncToFirestore(buildPayload());
-      _syncTimeout = null;
-    }, 500);
+      _syncTimeout=null;
+    },500);
   }
 }
 
 function initFirebase(){
-  try{
-    firebase.initializeApp(firebaseConfig);
-    db=firebase.firestore();
-    // Enable offline persistence
-    db.enablePersistence().catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('Persistence failed: multiple tabs');
-      } else if (err.code === 'unimplemented') {
-        console.warn('Persistence not supported');
+  if(!db)return;
+  setSyncStatus('syncing');
+  
+  db.collection('study_data').doc(syncUserId).onSnapshot((doc)=>{
+    if(doc.exists){
+      const data=doc.data();
+      if(data&&data.payload){
+        mergePayload(data.payload);
+        subjects=ls('subjects_v2',subjects);
+        log=ls('log:'+todayKey(),{});
+        goalReached=ls('gr:'+todayKey(),false);
+        adrMode=goalReached&&total()>=ggs();
+        render();
       }
-    });
-
-    // Anonymous auth
-    firebase.auth().signInAnonymously().then((userCredential) => {
-      syncUserId = userCredential.user.uid;
-      ssNow('user_id', syncUserId);
-      syncUsername = ls('username', '');
-      if (!syncUsername) {
-        showNameModal();
-      } else {
-        setupSync();
-      }
-    }).catch((error) => {
-      console.warn('Anonymous auth failed', error);
-      setSyncStatus('offline');
-      syncUsername = ls('username', '');
-      if (!syncUsername) showNameModal();
-      else setupSync();
-    });
-
-    // Real-time listener for own data
-    function setupSync(){
-      setSyncStatus('syncing');
-      db.collection('study_data').doc(syncUserId).onSnapshot((doc)=>{
-        if(doc.exists){
-          const data=doc.data();
-          if(data&&data.payload){
-            mergePayload(data.payload);
-            subjects=ls('subjects_v2',subjects);
-            log=ls('log:'+todayKey(),{});
-            goalReached=ls('gr:'+todayKey(),false);
-            adrMode=goalReached&&total()>=ggs();
-            render();
-          }
-        }
-        setSyncStatus('synced');
-      },(error)=>{
-        setSyncStatus('error');
-        console.warn('Firestore listener error',error);
-      });
-
-      // Leaderboard real-time listener
-      db.collection('leaderboard').onSnapshot(()=>{
-        if(tab==='lb')renderLB();
-      },(error)=>{console.warn('LB listener error',error);});
-
-      // Initial sync push
-      queueSync();
-
-      // Push every 30s (battery friendly)
-      setInterval(()=>{if(document.visibilityState==='visible')syncToFirestore(buildPayload());},30000);
     }
+    setSyncStatus('synced');
+  },(error)=>{
+    setSyncStatus('error');
+    console.warn('Firestore listener error',error);
+  });
 
-  }catch(e){setSyncStatus('error');console.warn('Firebase init',e);}
+  db.collection('leaderboard').onSnapshot(()=>{
+    if(tab==='lb')renderLB();
+  },(error)=>{console.warn('LB listener error',error);});
+
+  queueSync();
+  setInterval(()=>{if(document.visibilityState==='visible')syncToFirestore(buildPayload());},30000);
 }
 
 function buildPayload(){
   const obj={};
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
-    if(k&&!k.startsWith('_')&&k!=='snd_vol'&&k!=='snd_open'&&k!=='snd_last'&&k!=='setup_done'){
+    if(k&&!k.startsWith('_')&&k!=='snd_vol'&&k!=='snd_open'&&k!=='snd_last'){
       try{obj[k]=JSON.parse(localStorage.getItem(k));}catch{obj[k]=localStorage.getItem(k);}
     }
   }
@@ -751,7 +888,6 @@ function buildPayload(){
 }
 
 function mergePayload(remote){
-  // Merge remote into local with conflict resolution
   Object.entries(remote).forEach(([k,rv])=>{
     if(k.startsWith('log:')){
       const local=ls(k,{});const merged={...local};
@@ -765,7 +901,6 @@ function mergePayload(remote){
     }else if(k.startsWith('gr:')){
       ssNow(k,(ls(k,false)||rv));
     }else{
-      // For subjects and scalar keys, remote wins (last writer)
       ssNow(k,rv);
     }
   });
@@ -805,35 +940,14 @@ async function pushLeaderboardFirestore(){
 function setSyncStatus(state){
   const dot=document.getElementById('sync-dot'),lbl=document.getElementById('sync-lbl');
   if(!dot||!lbl)return;
-  const actualState = navigator.onLine ? state : 'offline';
+  const actualState=navigator.onLine?state:'offline';
   dot.className='sdot '+actualState;
   const map={synced:'synced',syncing:'syncing',error:'error',offline:'offline'};
   lbl.textContent=map[actualState]||actualState;
 }
 
-// Online/offline listeners
-window.addEventListener('online', () => { setSyncStatus('synced'); });
-window.addEventListener('offline', () => { setSyncStatus('offline'); });
-
-// ════════════════════════════════════════════════════
-// NAME MODAL (display name only)
-// ════════════════════════════════════════════════════
-function showNameModal() {
-  document.getElementById('name-ov').classList.add('show');
-  setTimeout(() => document.getElementById('name-inp').focus(), 80);
-}
-function saveName() {
-  const name = document.getElementById('name-inp').value.trim() || 'Anon';
-  syncUsername = name;
-  ssNow('username', name);
-  document.getElementById('name-ov').classList.remove('show');
-  if (db) pushLeaderboardFirestore();
-}
-function skipName() {
-  syncUsername = 'Anon';
-  ssNow('username', 'Anon');
-  document.getElementById('name-ov').classList.remove('show');
-}
+window.addEventListener('online',()=>{setSyncStatus('synced');});
+window.addEventListener('offline',()=>{setSyncStatus('offline');});
 
 // ════════════════════════════════════════════════════
 // WAKE LOCK
@@ -859,13 +973,12 @@ function persistTimer(){ssNow('_t0',t0);ssNow('_active',active);}
 function clearPersistedTimer(){try{localStorage.removeItem('_t0');localStorage.removeItem('_active');}catch{}}
 
 // ════════════════════════════════════════════════════
-// DAILY RESET (timezone-aware)
+// DAILY RESET
 // ════════════════════════════════════════════════════
 function checkDayRollover(){
   const lastKey=ls('_last_day_key',null);
   const todK=todayKey();
   if(lastKey&&lastKey!==todK){
-    // Day rolled over — if timer was running reset it
     if(active&&t0){
       const added=Math.floor((Date.now()-t0)/1000);
       log[active]=(log[active]||0)+added;
@@ -1053,7 +1166,7 @@ function checkMilestones(){
 }
 
 // ════════════════════════════════════════════════════
-// INIT
+// INIT APP (local data + firebase init)
 // ════════════════════════════════════════════════════
 function initApp(){
   _lightMode=ls('light_mode',false);
@@ -1089,10 +1202,7 @@ function initApp(){
   document.getElementById('hdate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
   document.getElementById('gtgt').textContent=ls('goal_h',6)+'h goal';
 
-  // Keyboard nav
   document.addEventListener('keydown',handleKeyNav);
-
-  // Visibility / day rollover check
   document.addEventListener('visibilitychange',()=>{
     checkDayRollover();
     if(document.visibilityState==='visible'){
@@ -1102,11 +1212,22 @@ function initApp(){
       updateBgBar();
     }else updateBgBar();
   });
-
-  // Midnight rollover check every minute
   setInterval(()=>{checkDayRollover();},60000);
-
   render();
+
+  // Init Firebase after local state is ready
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    db.enablePersistence().catch((err)=>{
+      if(err.code==='failed-precondition'){console.warn('Persistence: multiple tabs');}
+      else if(err.code==='unimplemented'){console.warn('Persistence not supported');}
+    });
+    authInitialized=true;
+  }catch(e){
+    console.warn('Firebase init error:',e);
+    setSyncStatus('offline');
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -1136,7 +1257,7 @@ function toggleTheme(){
 }
 
 // ════════════════════════════════════════════════════
-// RAF-THROTTLED TICK (DOM updates)
+// RAF-THROTTLED TICK
 // ════════════════════════════════════════════════════
 function tick(){
   live=Math.floor((Date.now()-t0)/1000);
@@ -1173,7 +1294,7 @@ function tickDOM(){
 }
 
 // ════════════════════════════════════════════════════
-// RENDER (main — smart DOM update)
+// RENDER
 // ════════════════════════════════════════════════════
 function render(){
   if(tab==='today')renderToday();
@@ -1230,7 +1351,7 @@ function go(t){
 }
 
 // ════════════════════════════════════════════════════
-// TODAY TAB (no session list – moved to chart)
+// TODAY TAB
 // ════════════════════════════════════════════════════
 function renderToday(){
   const el=document.getElementById('tab-today'),tot=total();
@@ -1255,7 +1376,6 @@ function renderToday(){
     }).join('');
   }
 
-  // Sound section only
   const sndPillsHtml=Object.entries(SOUNDS).map(([k,v])=>`<button class="snd-pill${sndPlaying===k?' on':''}" id="sp-${k}" onclick="playSound('${k}')" aria-pressed="${sndPlaying===k}" aria-label="${v.n}: ${v.sub}">${v.n}<span class="snd-sub" aria-hidden="true">${v.sub}</span></button>`).join('');
   const sndDescHtml=sndPlaying?`<div class="snd-desc">${SOUNDS[sndPlaying].desc}</div>${SOUNDS[sndPlaying].phones?'<div class="snd-phones" style="margin-top:6px">🎧 Headphones required for full binaural effect</div>':''}`:'<div class="snd-desc" style="color:var(--t5)">Tap a sound to begin. All generated locally.</div>';
   html+=`<div class="snd-sec">
@@ -1311,7 +1431,7 @@ function stopTimer(){
   document.title='Study';
   announce('Stopped: '+stopped+' — '+fmt(added)+' logged');
   updateBgBar();
-  queueSync(); // sync after timer stop
+  queueSync();
   render();
 }
 
@@ -1375,7 +1495,7 @@ function deleteSess(dateKey,idx){
 }
 
 // ════════════════════════════════════════════════════
-// CHART TAB (now includes Today's Sessions)
+// CHART TAB
 // ════════════════════════════════════════════════════
 function renderChart(){
   const el=document.getElementById('tab-chart'),now=new Date();
@@ -1406,17 +1526,17 @@ function renderChart(){
   const isCur=chartYr===now.getFullYear()&&chartMo===now.getMonth();
   const tot=total(),logged=subjects.filter(s=>ssec(s.name)>0);
   const bhtml=logged.length?logged.map(s=>{const sec=ssec(s.name),pct=tot>0?sec/tot:0,on=active===s.name;return`<div class="brow"><div class="btop"><span class="bname">${s.name}</span><span class="btime" style="color:${on?s.color:'var(--t3)'}">${fmt(sec)}</span></div><div class="bbg"><div class="bfill" style="width:${pct*100}%;background:${on?s.color:'var(--border3)'}"></div></div></div>`;}).join(''):'<div class="nodata">nothing logged today</div>';
-  const todaySessions = ls('sessions:'+todayKey(),[]);
-  let sessionsHtml = '';
+  const todaySessions=ls('sessions:'+todayKey(),[]);
+  let sessionsHtml='';
   if(todaySessions.length){
-    sessionsHtml = todaySessions.map((s,i)=>`<div class="sess-item">
+    sessionsHtml=todaySessions.map((s,i)=>`<div class="sess-item">
       <div class="sess-dot" style="background:${sc(s.name)}" aria-hidden="true"></div>
       <span class="sess-name">${s.name}</span>
       <span class="sess-time" tabindex="0" role="button" aria-label="Edit session: ${s.name}, ${Math.round(s.dur/60)} minutes" onclick="openSessEditModal('${todayKey()}',${i})" onkeydown="if(event.key==='Enter')openSessEditModal('${todayKey()}',${i})">${Math.round(s.dur/60)}m · ${hl(s.h)}</span>
       <button class="sess-del" onclick="deleteSess('${todayKey()}',${i})" aria-label="Delete this session">✕</button>
     </div>`).join('');
-  } else {
-    sessionsHtml = '<div class="nodata" style="margin-top:8px;">no manual sessions</div>';
+  }else{
+    sessionsHtml='<div class="nodata" style="margin-top:8px;">no manual sessions</div>';
   }
   el.innerHTML=`
     <div class="rrow" role="group" aria-label="Date range">${['3D','5D','7D','14D','1M'].map(r=>`<button class="rbtn${range===r?' on':''}" onclick="setRange('${r}')" aria-pressed="${range===r}">${r}</button>`).join('')}</div>
@@ -1459,7 +1579,7 @@ function buildLineSVG(data,xlabs){
 }
 
 // ════════════════════════════════════════════════════
-// STATS TAB (export removed)
+// STATS TAB
 // ════════════════════════════════════════════════════
 function renderStats(){
   const el=document.getElementById('tab-stats');
@@ -1506,13 +1626,11 @@ function renderStats(){
     <div style="height:14px"></div>`;
 }
 
-// ── HEATMAP (GitHub-style, fully accessible) ──
 function buildHeatmapSVG(){
   const lm=buildLogMap(),now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
   const WEEKS=53,cell=7,unit=8,labelH=14,svgW=WEEKS*unit+4,svgH=labelH+7*unit+4;
   const startDate=new Date(today);startDate.setDate(today.getDate()-today.getDay()-51*7);
   const accent=_lightMode?'#5a8a00':'#C8FF00';
-  const bgCell=_lightMode?'#d8d8d2':'#141414';
   let rects='',mlabs='',lastMo=-1;
   const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -1526,8 +1644,7 @@ function buildHeatmapSVG(){
       let fill;
       if(_lightMode){fill=h===0?'#d8d8d2':h<1?'#b8d490':h<2?'#8bbf50':h<4?'#5a9a18':h<6?'#3d7a0a':'#1f5200';}
       else{fill=h===0?'#141414':h<1?'#1a3a08':h<2?'#2d6010':h<4?'#4a9918':h<6?'#80cc28':accent;}
-      const dateStr=dkeyFor(date);
-      rects+=`<rect x="${w*unit+8}" y="${labelH+d*unit}" width="${cell}" height="${cell}" rx="1.5" fill="${fill}" aria-label="${dateStr}: ${h.toFixed(1)}h" role="gridcell" tabindex="-1"><title>${dateStr}: ${h.toFixed(1)}h</title></rect>`;
+      rects+=`<rect x="${w*unit+8}" y="${labelH+d*unit}" width="${cell}" height="${cell}" rx="1.5" fill="${fill}" aria-label="${dkeyFor(date)}: ${h.toFixed(1)}h" role="gridcell" tabindex="-1"><title>${dkeyFor(date)}: ${h.toFixed(1)}h</title></rect>`;
       if(date.getMonth()!==lastMo){lastMo=date.getMonth();mlabs+=`<text x="${w*unit+8}" y="${labelH-2}" font-size="7" fill="${_lightMode?'#666':'#555'}" font-family="ui-monospace,monospace">${MO[date.getMonth()]}</text>`;}
     }
   }
@@ -1549,12 +1666,12 @@ function buildPeakSVG(hd){
 }
 
 // ════════════════════════════════════════════════════
-// LEADERBOARD TAB (with skeleton loader)
+// LEADERBOARD TAB
 // ════════════════════════════════════════════════════
 async function renderLB(){
   const el=document.getElementById('tab-lb');
   if(!db){
-    el.innerHTML=`<div class="lb-empty">Configure Firebase to see the leaderboard.<br><br><button class="ebtn" onclick="openSyncModal()" style="margin-top:12px">Set up sync</button></div>`;
+    el.innerHTML=`<div class="lb-empty">Sign in to see the leaderboard.</div>`;
     return;
   }
   el.innerHTML=`<div class="lb-header"><div class="lbl" style="margin:0">Leaderboard</div><div class="lb-live"><div class="lb-dot on" aria-hidden="true"></div><span>live</span></div></div>
@@ -1588,11 +1705,11 @@ async function renderLB(){
       </div>`;
     }).join('');
     document.getElementById('lb-list').innerHTML=`<div role="list">${rows}</div>`;
-  }catch(e){document.getElementById('lb-list').innerHTML='<div class="lb-empty">Failed to load. Check your Firebase connection.</div>';console.warn('lb fetch',e);}
+  }catch(e){document.getElementById('lb-list').innerHTML='<div class="lb-empty">Failed to load. Check your connection.</div>';console.warn('lb fetch',e);}
 }
 
 // ════════════════════════════════════════════════════
-// EDIT TAB (input hygiene added)
+// EDIT TAB
 // ════════════════════════════════════════════════════
 function renderEdit(){
   const el=document.getElementById('tab-edit'),gH=ls('goal_h',6);
@@ -1652,7 +1769,7 @@ function pickC(c){if(cpTarget==null)return;subjects[cpTarget].color=c;ss('subjec
 function closeCP(){document.getElementById('cpov').classList.remove('show');cpTarget=null;}
 
 // ════════════════════════════════════════════════════
-// SETTINGS TAB (only reset button)
+// SETTINGS TAB
 // ════════════════════════════════════════════════════
 function renderSettings(){
   const el=document.getElementById('tab-settings');
@@ -1720,7 +1837,7 @@ function confirmReset(){if(confirm('Delete ALL study data? This cannot be undone
 function resetData(){if(active)stopTimer();localStorage.clear();location.reload();}
 
 // ════════════════════════════════════════════════════
-// SCREENSHOT (canvas-based, no external libs)
+// SCREENSHOT
 // ════════════════════════════════════════════════════
 function takeScreenshot(){
   document.getElementById('shot-ov').classList.add('show');
@@ -1772,6 +1889,27 @@ function downloadShot(){
 function closeShot(){document.getElementById('shot-ov').classList.remove('show');}
 
 // ════════════════════════════════════════════════════
+// SYNC MODAL
+// ════════════════════════════════════════════════════
+function openSyncModal(){
+  document.getElementById('sm-name').value=ls('username','');
+  document.getElementById('sm-status').textContent='';
+  document.getElementById('sync-ov').classList.add('show');
+  setTimeout(()=>document.getElementById('sm-name').focus(),80);
+}
+function closeSyncModal(){document.getElementById('sync-ov').classList.remove('show');}
+async function smSave(){
+  const name=document.getElementById('sm-name').value.trim();
+  const st=document.getElementById('sm-status');
+  if(name){ssNow('username',name);syncUsername=name;}
+  closeSyncModal();
+  if(db){
+    st.textContent='Connecting…';st.className='sm-status';
+    syncToFirestore(buildPayload());
+  }
+}
+
+// ════════════════════════════════════════════════════
 // TOAST
 // ════════════════════════════════════════════════════
 function showToast(msg,type=''){
@@ -1782,14 +1920,12 @@ function showToast(msg,type=''){
 }
 
 // ════════════════════════════════════════════════════
-// BOOT (no setup screen, anonymous auth flow)
+// BOOT
 // ════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  initApp(); // load local data, start timers
-  initFirebase(); // auth, sync, persistence
+document.addEventListener('DOMContentLoaded',()=>{
+  initApp();
 });
 
-// Apply saved settings immediately
 if(ls('light_mode',false)){document.body.classList.add('light');const b=document.getElementById('theme-btn');if(b)b.textContent='🌙';}
 if(ls('high_contrast',false))toggleHighContrast(true);
 if(ls('reduce_motion',false))toggleReduceMotion(true);
