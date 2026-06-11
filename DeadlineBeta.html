@@ -1769,6 +1769,137 @@ function showToast(msg,type=''){
 }
 
 // ════════════════════════════════════════════════════
+// YJS + WEBRTC SYNC (CROSS-DEVICE)
+// ════════════════════════════════════════════════════
+// Load Yjs modules via dynamic imports when ready
+let ydoc = null, yProvider = null, yLeaderboard = null;
+
+async function initYjsSync() {
+    try {
+        const Y = await import('https://unpkg.com/yjs@13.6.8/dist/yjs.mjs');
+        const { WebrtcProvider } = await import('https://unpkg.com/y-webrtc@10.3.0/bin/y-webrtc.js');
+        
+        ydoc = new Y.Doc();
+        yProvider = new WebrtcProvider('study-dashboard-room', ydoc, {
+            signaling: ['wss://signaling.yjs.dev'],
+            password: null,
+            awareness: new Y.Awareness(ydoc),
+            maxConns: 20,
+        });
+        yLeaderboard = ydoc.getMap('leaderboard');
+        
+        // When remote data arrives, sync to localStorage and refresh UI
+        yLeaderboard.observe(() => {
+            yLeaderboard.forEach((entry, key) => {
+                try {
+                    localStorage.setItem(key, JSON.stringify(entry));
+                } catch(e) {}
+            });
+            // Trigger local BroadcastChannel and storage events
+            broadcastChange({ type: 'leaderboard-changed' });
+            if (tab === 'lb') renderLB();
+        });
+        
+        // Push our own entry to the shared map
+        updateLeaderboardEntry = function() {
+            // Original update to localStorage + BroadcastChannel
+            const todaySec = Object.values(ls('log:'+todayKey(),{})).reduce((a,b)=>a+b,0)+(active?live:0);
+            let weekSec=0;
+            for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);weekSec+=Object.values(ls('log:'+dkeyFor(d),{})).reduce((a,b)=>a+b,0);}
+            weekSec+=active?live:0;
+            const alltimeSec = allTimeSec();
+            const entry = {username:syncUsername||'Anon',today_sec:todaySec,week_sec:weekSec,alltime_sec:alltimeSec,updated_at:Date.now()};
+            const key = 'lb_entry_'+tabId;
+            try { localStorage.setItem(key, JSON.stringify(entry)); } catch(e) {}
+            broadcastChange({ type: 'leaderboard-changed' });
+            // Push to Yjs if available
+            if (yLeaderboard) yLeaderboard.set(key, entry);
+        };
+        
+        // Purge old entries every 60s
+        setInterval(() => {
+            if (!yLeaderboard) return;
+            yLeaderboard.forEach((entry, key) => {
+                if (Date.now() - entry.updated_at > 86400000) {
+                    yLeaderboard.delete(key);
+                    localStorage.removeItem(key);
+                }
+            });
+        }, 60000);
+        
+        setSyncStatus('synced');
+        console.log('Yjs WebRTC sync initialized');
+    } catch(e) {
+        console.warn('Yjs sync unavailable, falling back to local-only', e);
+        setSyncStatus('local');
+    }
+}
+
+// Call Yjs init after basic setup
+function initApp(){
+    _lightMode=ls('light_mode',false);
+    if(_lightMode)document.body.classList.add('light');
+    sndVol=parseFloat(ls('snd_vol',0.6));
+    sndOpen=ls('snd_open',false);
+    pomoCfg=ls('pomo_cfg',{work:25,shortBreak:5,longBreak:15,rounds:4});
+    syncUsername=ls('username','Anon');
+
+    const v2=ls('subjects_v2',null);
+    if(v2){subjects=v2;}else{const old=ls('subjects',['Math','Physics','Biology']);subjects=old.map((name,i)=>({name,color:PAL[i%PAL.length],goal_h:0}));ss('subjects_v2',subjects);}
+    subjects.forEach(s=>{if(s.goal_h==null)s.goal_h=0;});
+
+    checkDayRollover();
+    log=ls('log:'+todayKey(),{});
+    goalReached=ls('gr:'+todayKey(),false);
+
+    const savedActive=ls('_active',null),savedT0=ls('_t0',null);
+    if(savedActive&&savedT0&&subjects.find(s=>s.name===savedActive)){
+        active=savedActive;t0=savedT0;live=Math.floor((Date.now()-t0)/1000);
+        const startDay=dkeyFor(new Date(t0));
+        if(startDay!==todayKey()){
+            const yLog=ls('log:'+startDay,{});const endOfDay=new Date(t0);endOfDay.setHours(23,59,59,999);
+            yLog[active]=(yLog[active]||0)+Math.max(0,Math.floor((endOfDay-t0)/1000));
+            ssNow('log:'+startDay,yLog);clearPersistedTimer();active=null;live=0;t0=null;
+        }else{
+            adrMode=goalReached&&total()>=ggs();
+            ticker=setInterval(tick,1000);reqWake();
+            if(live>60)showToast('Restored — '+fmt(live)+' tracked','info');
+        }
+    }
+    adrMode=goalReached&&total()>=ggs();
+    document.getElementById('hdate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+    document.getElementById('gtgt').textContent=ls('goal_h',6)+'h goal';
+
+    document.addEventListener('keydown',handleKeyNav);
+    document.addEventListener('visibilitychange',()=>{
+        checkDayRollover();
+        if(document.visibilityState==='visible'){
+            if(active&&t0){live=Math.floor((Date.now()-t0)/1000);render();}
+            if(active)reqWake();
+            if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+            updateBgBar();
+        }else updateBgBar();
+    });
+    setInterval(()=>{checkDayRollover();},60000);
+
+    initBroadcastChannel();
+    initYjsSync();   // <-- new cross-device sync
+
+    if(!ls('username',null)||ls('username','')===''){
+        showNameModal();
+    }
+
+    render();
+    updateLeaderboardEntry();
+
+    setInterval(()=>{
+        if(document.visibilityState==='visible'){
+            updateLeaderboardEntry();
+        }
+    },30000);
+}
+
+// ════════════════════════════════════════════════════
 // BOOT
 // ════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
@@ -1778,6 +1909,11 @@ document.addEventListener('DOMContentLoaded',()=>{
 if(ls('light_mode',false)){document.body.classList.add('light');const b=document.getElementById('theme-btn');if(b)b.textContent='🌙';}
 if(ls('high_contrast',false))toggleHighContrast(true);
 if(ls('reduce_motion',false))toggleReduceMotion(true);
+</script>
+
+<!-- YJS + WEBRTC MODULES (loaded after main script to avoid blocking) -->
+<script type="module">
+    // The dynamic import in initYjsSync handles loading; this is just a fallback preload hint
 </script>
 </body>
 </html>
