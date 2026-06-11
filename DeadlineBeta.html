@@ -722,108 +722,90 @@ const total=()=>Object.values(log).reduce((a,b)=>a+b,0)+(active?live:0);
 const ssec=name=>active===name?(log[name]||0)+live:(log[name]||0);
 function announce(msg){const el=document.getElementById('a11y-live');if(el)el.textContent=msg;}
 
-// ════════════════════════════════════════════════════
-// AUTHENTICATION FLOW
-// ════════════════════════════════════════════════════
-function setLoginLoading(btnId, loading){
-  const btn=document.getElementById(btnId);
-  if(btn)btn.classList.toggle('loading',loading);
-  document.querySelectorAll('.login-btn').forEach(b=>b.disabled=loading);
-}
+// ═══════════════ AUTH FUNCTIONS ═══════════════
 
-function showLoginError(msg){
-  const el=document.getElementById('login-error');
-  if(el)el.textContent=msg;
-  setTimeout(()=>{if(el)el.textContent='';},5000);
-}
-
-/* CHANGED: onAuthSuccess now uses user.displayName when available */
-function onAuthSuccess(user){
-  syncUserId=user.uid;
-  ssNow('user_id',syncUserId);
-  let displayName=user.displayName||'';
-  if(displayName){
-    syncUsername=displayName;
-    ssNow('username',displayName);
-  }else{
-    syncUsername=ls('username','');
+async function signInWithGoogle() {
+  document.getElementById('login-error').textContent = '';
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await firebase.auth().signInWithRedirect(provider);
+  } catch (e) {
+    console.warn('Google redirect error:', e);
+    document.getElementById('login-error').textContent = 'Sign-in failed. Try anonymous.';
   }
-  document.getElementById('login-screen').classList.add('hidden');
-  if(!syncUsername){
-    showNameModal();
-  }else{
+}
+
+async function signInWithApple() {
+  document.getElementById('login-error').textContent = '';
+  try {
+    const provider = new firebase.auth.OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    await firebase.auth().signInWithRedirect(provider);
+  } catch (e) {
+    console.warn('Apple redirect error:', e);
+    document.getElementById('login-error').textContent = 'Sign-in failed. Try anonymous.';
+  }
+}
+
+async function signInAnonymously() {
+  document.getElementById('login-error').textContent = '';
+  try {
+    const result = await firebase.auth().signInAnonymously();
+    handleAuthUser(result.user);
+  } catch (e) {
+    console.warn('Anonymous failed, offline mode:', e);
+    syncUserId = 'local-' + Date.now();
+    syncUsername = 'Guest';
+    ssNow('user_id', syncUserId);
+    ssNow('username', 'Guest');
+    document.getElementById('login-screen').classList.add('hidden');
     completeAuthSetup();
   }
 }
 
-/* CHANGED: completeAuthSetup no longer depends on db, allows offline */
-function completeAuthSetup(){
-  if(db){
-    initFirebase();
-  }else{
-    setSyncStatus('offline');
-    render();
+// ═══════════════ AUTH HANDLER ═══════════════
+
+function handleAuthUser(user) {
+  if (!user) return;
+  
+  syncUserId = user.uid;
+  ssNow('user_id', syncUserId);
+
+  // Prefer Google's display name, then stored name, then prompt
+  if (user.displayName) {
+    syncUsername = user.displayName;
+    ssNow('username', user.displayName);
+  } else {
+    syncUsername = ls('username', '');
+  }
+
+  document.getElementById('login-screen').classList.add('hidden');
+
+  if (!syncUsername || syncUsername === 'Anon' || syncUsername === 'Guest') {
+    showNameModal();
+  } else {
+    completeAuthSetup();
   }
 }
 
-/* CHANGED: Google now uses redirect instead of popup */
-async function signInWithGoogle(){
-  showLoginError('');
-  setLoginLoading('btn-google',true);
-  try{
-    const provider=new firebase.auth.GoogleAuthProvider();
-    // Redirect-based sign-in – no popup, no CORS issues
-    await firebase.auth().signInWithRedirect(provider);
-    // Page will reload after redirect; no further action here
-  }catch(e){
-    console.warn('Google sign-in redirect error:',e);
-    showLoginError('Google sign-in failed. Check console.');
-    setLoginLoading('btn-google',false);
-  }
-}
+// ═══════════════ AUTH LISTENERS ═══════════════
 
-/* Apple sign-in remains popup – unchanged */
-async function signInWithApple(){
-  showLoginError('');
-  setLoginLoading('btn-apple',true);
-  try{
-    const provider=new firebase.auth.OAuthProvider('apple.com');
-    provider.addScope('email');
-    provider.addScope('name');
-    const result=await firebase.auth().signInWithPopup(provider);
-    onAuthSuccess(result.user);
-  }catch(e){
-    console.warn('Apple sign-in:',e);
-    if(e.code==='auth/popup-closed-by-user'){
-      // user closed popup, do nothing
-    }else{
-      showLoginError('Apple sign-in failed. Check console.');
-    }
-  }finally{
-    setLoginLoading('btn-apple',false);
-  }
-}
+// Catches Google/Apple redirect return
+firebase.auth().getRedirectResult()
+  .then(result => {
+    if (result && result.user) handleAuthUser(result.user);
+  })
+  .catch(e => {
+    console.warn('Redirect result error:', e);
+  });
 
-/* CHANGED: anonymous sign-in with graceful offline fallback */
-async function signInAnonymously(){
-  showLoginError('');
-  setLoginLoading('btn-anon',true);
-  try{
-    const result=await firebase.auth().signInAnonymously();
-    onAuthSuccess(result.user);
-  }catch(e){
-    console.warn('Anonymous sign-in failed, switching to offline mode:',e);
-    // Graceful fallback – use local id without Firebase
-    syncUserId='local-'+Date.now();
-    ssNow('user_id',syncUserId);
-    syncUsername='Guest';
-    document.getElementById('login-screen').classList.add('hidden');
-    showNameModal(); // user can set a display name, then complete
-    // completeAuthSetup will be called after name modal – it will run offline
-  }finally{
-    setLoginLoading('btn-anon',false);
+// Persists login across refreshes
+firebase.auth().onAuthStateChanged(user => {
+  if (user && !document.getElementById('login-screen').classList.contains('hidden')) {
+    handleAuthUser(user);
   }
-}
+});
 
 // ════════════════════════════════════════════════════
 // NAME MODAL (unchanged logic)
