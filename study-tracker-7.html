@@ -198,6 +198,34 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 #bgbar{display:none;background:#111;border-bottom:1px solid #1e1e1e;padding:6px 24px;font-size:9px;color:#555;letter-spacing:.18em;text-transform:uppercase;flex-shrink:0;align-items:center;justify-content:space-between;}
 #bgbar.show{display:flex;}
 #bgbar span{color:#777;}
+
+/* ── SYNC ── */
+#syncbar{background:#0a0a0a;border-bottom:1px solid #1a1a1a;padding:5px 16px;font-size:9px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:8px;}
+#sync-status{display:flex;align-items:center;gap:5px;color:#444;letter-spacing:.12em;text-transform:uppercase;}
+#sync-dot{width:5px;height:5px;border-radius:50%;background:#2a2a2a;flex-shrink:0;transition:background .4s;}
+#sync-dot.synced{background:#C8FF00;box-shadow:0 0 6px #C8FF0066;}
+#sync-dot.syncing{background:#FF9F40;animation:sdp .8s ease-in-out infinite;}
+#sync-dot.error{background:#FF5555;}
+#sync-dot.offline{background:#444;}
+@keyframes sdp{0%,100%{opacity:.4}50%{opacity:1}}
+#sync-id-row{display:flex;align-items:center;gap:5px;}
+#sync-id-inp{background:#111;border:1px solid #1e1e1e;border-radius:5px;color:#777;font-size:9px;font-family:inherit;padding:3px 7px;width:84px;letter-spacing:.04em;outline:none;}
+#sync-id-inp:focus{border-color:#333;color:#aaa;}
+.sbtn{background:none;border:1px solid #1e1e1e;color:#555;font-size:9px;font-family:inherit;padding:3px 8px;border-radius:5px;cursor:pointer;letter-spacing:.08em;white-space:nowrap;}
+.sbtn:active{border-color:#C8FF0055;color:#C8FF00;}
+#sync-modal-ov{position:fixed;inset:0;background:#000000cc;z-index:800;display:none;align-items:flex-end;justify-content:center;}
+#sync-modal-ov.show{display:flex;}
+#sync-modal{background:#0f0f0f;border:1px solid #1e1e1e;border-radius:18px 18px 0 0;padding:22px 22px 36px;width:100%;max-width:440px;}
+.sm-title{font-size:10px;color:#555;letter-spacing:.25em;text-transform:uppercase;margin-bottom:16px;}
+.sm-row{display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
+.sm-lbl{font-size:9px;color:#555;letter-spacing:.1em;}
+.sm-inp{background:#111;border:1px solid #1e1e1e;border-radius:8px;color:#ccc;font-size:13px;font-family:inherit;padding:10px 12px;width:100%;outline:none;letter-spacing:.04em;}
+.sm-inp:focus{border-color:#333;}
+.sm-hint{font-size:9px;color:#333;letter-spacing:.06em;line-height:1.5;}
+.sm-btns{display:flex;gap:8px;margin-top:6px;}
+.sm-btn{flex:1;padding:12px;border-radius:10px;font-size:12px;font-family:inherit;cursor:pointer;letter-spacing:.08em;border:1px solid #1e1e1e;background:#0d0d0d;color:#666;}
+.sm-btn.primary{background:#C8FF0015;border-color:#C8FF0055;color:#C8FF00;font-weight:600;}
+.sm-btn:active{opacity:.7;}
 </style>
 </head>
 <body>
@@ -205,6 +233,31 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 <div id="bgbar">
   <span>⏱ timer running in background</span>
   <span id="bgtime"></span>
+</div>
+
+<div id="syncbar">
+  <div id="sync-status"><div id="sync-dot"></div><span id="sync-lbl">sync off</span></div>
+  <div id="sync-id-row">
+    <input id="sync-id-inp" placeholder="sync id..." maxlength="24" spellcheck="false" oninput="onSyncIdInput(this.value)" onkeydown="if(event.key==='Enter')syncConnect()"/>
+    <button class="sbtn" onclick="openSyncModal()">⚙</button>
+  </div>
+</div>
+
+<div id="sync-modal-ov" onclick="e=>e.target===this&&closeSyncModal()">
+  <div id="sync-modal">
+    <div class="sm-title">Cloud Sync</div>
+    <div class="sm-row">
+      <div class="sm-lbl">Sync ID — share this with your other devices</div>
+      <input class="sm-inp" id="sm-id" placeholder="e.g. alex-study-2025" maxlength="24" spellcheck="false"/>
+      <div class="sm-hint">Use the same ID on every device to share data. Anyone with your ID can read & write your data — keep it private or add a personal word to it.</div>
+    </div>
+    <div class="sm-btns">
+      <button class="sm-btn" onclick="closeSyncModal()">cancel</button>
+      <button class="sm-btn" onclick="smGenId()">random id</button>
+      <button class="sm-btn primary" onclick="smSave()">connect</button>
+    </div>
+    <div style="margin-top:14px;font-size:9px;color:#2a2a2a;letter-spacing:.06em;line-height:1.6">Data is stored in Claude artifact storage and syncs automatically every 15s while connected. Works across any device that opens this app with the same Sync ID.</div>
+  </div>
 </div>
 
 <div id="header">
@@ -865,7 +918,163 @@ function go(t){
   const ht=document.getElementById('htitle');if(ht)ht.textContent=t==='edit'?'Subjects':'';
   render();
 }
+// ── SYNC ENGINE ───────────────────────────────────────────────────
+// Keys we sync — everything except transient timer state and sound prefs
+const SYNC_KEYS_PREFIX=['log:','sessions:','gr:'];
+const SYNC_SCALAR_KEYS=['subjects_v2','goal_h','last_milestone'];
+const SYNC_IGNORE=['_t0','_active','snd_vol','snd_open','snd_last'];
+
+let syncId=localStorage.getItem('_syncId')||'';
+let syncInterval=null;
+let syncPending=false;
+let lastPushHash='';
+
+function isSyncKey(k){
+  if(SYNC_IGNORE.includes(k))return false;
+  if(SYNC_SCALAR_KEYS.includes(k))return true;
+  return SYNC_KEYS_PREFIX.some(p=>k.startsWith(p));
+}
+
+function buildSyncPayload(){
+  const obj={};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&isSyncKey(k)){try{obj[k]=JSON.parse(localStorage.getItem(k));}catch{obj[k]=localStorage.getItem(k);}}
+  }
+  return obj;
+}
+
+function applySyncPayload(remote){
+  // Merge remote into local — remote wins on a per-key basis for log/sessions
+  // For log keys, take the max per subject (never lose logged time)
+  Object.entries(remote).forEach(([k,rv])=>{
+    if(k.startsWith('log:')){
+      const local=ls(k,{});
+      const merged={...local};
+      if(rv&&typeof rv==='object'){Object.entries(rv).forEach(([sub,sec])=>{merged[sub]=Math.max(merged[sub]||0,sec);});}
+      localStorage.setItem(k,JSON.stringify(merged));
+    }else if(k.startsWith('sessions:')){
+      // Merge session arrays by deduplicating on {name,h,dur}
+      const local=ls(k,[]);const rem=Array.isArray(rv)?rv:[];
+      const seen=new Set(local.map(s=>s.name+':'+s.h+':'+s.dur));
+      const merged=[...local,...rem.filter(s=>!seen.has(s.name+':'+s.h+':'+s.dur))];
+      localStorage.setItem(k,JSON.stringify(merged));
+    }else if(k.startsWith('gr:')){
+      // goal-reached: true wins
+      const local=ls(k,false);
+      localStorage.setItem(k,JSON.stringify(local||rv));
+    }else{
+      // scalar keys (subjects_v2, goal_h, last_milestone) — remote wins
+      localStorage.setItem(k,JSON.stringify(rv));
+    }
+  });
+}
+
+function simpleHash(s){let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(31,h)+s.charCodeAt(i))|0;return h.toString(36);}
+
+async function syncPush(){
+  if(!syncId)return;
+  setSyncStatus('syncing');
+  try{
+    const payload=buildSyncPayload();
+    const str=JSON.stringify(payload);
+    const h=simpleHash(str);
+    if(h===lastPushHash){setSyncStatus('synced');return;} // nothing changed
+    await window.storage.set('sync:'+syncId,str,true);
+    lastPushHash=h;
+    setSyncStatus('synced');
+  }catch(e){setSyncStatus('error');console.warn('sync push fail',e);}
+}
+
+async function syncPull(){
+  if(!syncId)return;
+  setSyncStatus('syncing');
+  try{
+    const res=await window.storage.get('sync:'+syncId,true);
+    if(res&&res.value){
+      const remote=JSON.parse(res.value);
+      applySyncPayload(remote);
+      // Re-read today's log and subjects into memory
+      subjects=ls('subjects_v2',subjects);
+      log=ls('log:'+todayKey(),{});
+      goalReached=ls('gr:'+todayKey(),false);
+      adrMode=goalReached&&total()>=ggs();
+      render();
+    }
+    setSyncStatus('synced');
+    await syncPush(); // push any local-only changes back
+  }catch(e){setSyncStatus('error');console.warn('sync pull fail',e);}
+}
+
+function setSyncStatus(state){
+  const dot=document.getElementById('sync-dot'),lbl=document.getElementById('sync-lbl');
+  if(!dot||!lbl)return;
+  dot.className=state;
+  const map={synced:'synced',syncing:'syncing…',error:'error',offline:'offline','':'sync off'};
+  lbl.textContent=syncId?(map[state]||state):'sync off';
+}
+
+function startSync(){
+  if(syncInterval)clearInterval(syncInterval);
+  if(!syncId){setSyncStatus('');return;}
+  syncPull(); // immediate pull on connect
+  syncInterval=setInterval(()=>{syncPull();},15000);
+  document.getElementById('sync-id-inp').value=syncId;
+}
+
+function stopSync(){
+  if(syncInterval){clearInterval(syncInterval);syncInterval=null;}
+  setSyncStatus('');
+}
+
+function onSyncIdInput(v){
+  // live-update the inline input but don't connect yet
+  document.getElementById('sm-id').value=v;
+}
+
+function syncConnect(){
+  const v=document.getElementById('sync-id-inp').value.trim().replace(/\s+/g,'-').toLowerCase();
+  if(!v){stopSync();syncId='';localStorage.removeItem('_syncId');return;}
+  syncId=v;localStorage.setItem('_syncId',syncId);
+  document.getElementById('sync-id-inp').value=syncId;
+  startSync();
+}
+
+function openSyncModal(){
+  document.getElementById('sm-id').value=syncId||'';
+  document.getElementById('sync-modal-ov').classList.add('show');
+  setTimeout(()=>document.getElementById('sm-id').focus(),80);
+}
+function closeSyncModal(){document.getElementById('sync-modal-ov').classList.remove('show');}
+function smGenId(){
+  const words=['maple','tiger','delta','echo','sierra','nova','comet','pulse','vector','ember','solar','frost'];
+  const id=words[Math.floor(Math.random()*words.length)]+'-'+words[Math.floor(Math.random()*words.length)]+'-'+Math.floor(Math.random()*900+100);
+  document.getElementById('sm-id').value=id;
+}
+function smSave(){
+  const v=document.getElementById('sm-id').value.trim().replace(/\s+/g,'-').toLowerCase();
+  closeSyncModal();
+  document.getElementById('sync-id-inp').value=v;
+  syncId=v;
+  if(v){localStorage.setItem('_syncId',v);startSync();}
+  else{localStorage.removeItem('_syncId');stopSync();}
+}
+
+// Hook into ss() to trigger a push after local writes (debounced)
+const _ss_orig=ss;
+function ss(k,v){
+  _ss_orig(k,v);
+  if(syncId&&isSyncKey(k)){
+    clearTimeout(ss._pt);
+    ss._pt=setTimeout(syncPush,2000);
+  }
+}
+
+// ── SYNC CLOSE MODAL ON OUTSIDE TAP ──────────────────────────────
+document.getElementById('sync-modal-ov').addEventListener('click',function(e){if(e.target===this)closeSyncModal();});
+
 init();
+if(syncId)startSync();
 </script>
 </body>
 </html>
