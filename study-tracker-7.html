@@ -65,31 +65,68 @@ body{background:var(--bg);color:var(--t1);font-family:ui-monospace,'SF Mono','Co
 /* ... rest of CSS unchanged ... */
 </style>
 
-<!-- Firebase SDKs + initialization (compat) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script>
-  // Firebase config (kept from file) — replace with your own keys in production
-  const firebaseConfig = {
-    apiKey: "AIzaSyA9xk2rDZXE9Ro2hbIqfkZwMmQwgY7S3LM",
-    authDomain: "1:679495334937:web:9c7cc579bef986542f3e88.firebaseapp.com",
-    projectId: "deadlines---study-tracker",
-    storageBucket: "deadlines---study-tracker.appspot.com",
-    messagingSenderId: "679495334937",
-    appId: "1:679495334937:web:9c7cc579bef986542f3e8"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+// ════════════════════════════════════════════════════
+// FIREBASE SYNC & INITIALIZATION
+// ════════════════════════════════════════════════════
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    // User is authenticated (Anonymous or Logged In)
+    startFirestoreSync(user.uid);
+  } else {
+    // No user: Trigger Anonymous Auth
+    firebase.auth().signInAnonymously().catch(e => console.error("Auth Error:", e));
+  }
+});
 
-  // Enable offline persistence (best-effort)
-  db.enablePersistence().catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.log('Multiple tabs open, persistence can only be enabled in one.');
-    } else if (err.code === 'unimplemented') {
-      console.log("The browser doesn't support persistence.");
+async function startFirestoreSync(userId) {
+  if (!db || !userId) return;
+  
+  // Cleanup old listeners
+  if (firestoreUnsub) firestoreUnsub();
+
+  // Listen for real-time remote updates
+  firestoreUnsub = db.collection('study_data').doc(userId).onSnapshot(doc => {
+    if (doc.exists) {
+      const remotePayload = doc.data().payload;
+      mergePayload(remotePayload);
+      // Re-trigger UI render if needed
+      if(typeof render === 'function') render();
+    }
+  }, err => console.error("Sync Error:", err));
+}
+
+function syncToFirestore() {
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+  
+  const payload = buildPayload();
+  db.collection('study_data').doc(user.uid).set({
+    payload,
+    updated_at: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(e => console.error("Firestore Write Failed", e));
+}
+
+function buildPayload() {
+  const obj = {};
+  for(let i=0; i<localStorage.length; i++) {
+    const k = localStorage.key(i);
+    // Only sync essential data, ignore temporary/auth keys
+    if(k && !k.startsWith('_') && k !== 'sb_url' && k !== 'sb_key') {
+      try { obj[k] = JSON.parse(localStorage.getItem(k)); } catch { obj[k] = localStorage.getItem(k); }
+    }
+  }
+  return obj;
+}
+
+function mergePayload(remote) {
+  Object.entries(remote || {}).forEach(([k, rv]) => {
+    // Merge logic: Don't overwrite local if it's already defined
+    if (localStorage.getItem(k) === null) {
+      ssNow(k, rv);
     }
   });
+}
+
 </script>
 </head>
 <body>
