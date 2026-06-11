@@ -742,13 +742,7 @@ async function signInWithGoogle() {
     handleAuthUser(result.user);
   } catch (e) {
     console.warn('Google sign-in error:', e);
-    if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
-      // Fallback to redirect if popup blocked
-      const provider = new firebase.auth.GoogleAuthProvider();
-      await firebase.auth().signInWithRedirect(provider);
-      return;
-    }
-    document.getElementById('login-error').textContent = 'Sign-in failed: ' + (e.message || 'Network error');
+    document.getElementById('login-error').textContent = 'Sign-in failed. Try anonymous.';
   } finally {
     btn.classList.remove('loading');
   }
@@ -815,14 +809,6 @@ function handleAuthUser(user) {
 
 // ═══════════════ AUTH LISTENERS ═══════════════
 
-// Catches Google/Apple redirect return
-firebase.auth().getRedirectResult()
-  .then(result => {
-    if (result && result.user) handleAuthUser(result.user);
-  })
-  .catch(e => {
-    console.warn('Redirect result error:', e);
-  });
 
 // Persists login across refreshes
 firebase.auth().onAuthStateChanged(user => {
@@ -1242,15 +1228,6 @@ db.enablePersistence().catch((err) => {
   if (err.code === 'failed-precondition') {
     console.warn('Persistence: multiple tabs');
   }
-});
-
-// Handle Google/Apple redirect result after login
-firebase.auth().getRedirectResult().then(result => {
-  if (result.user) {
-    onAuthSuccess(result.user);
-  }
-}).catch(e => {
-  console.warn('Redirect error:', e);
 });
 
 // Persist login across page refreshes
