@@ -11,8 +11,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Dead-line">
-<title>Dead-line</title>
+<meta name="apple-mobile-web-app-title" content="Study">
+<title>Study</title>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -442,17 +442,17 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 <span class="sr-only" aria-live="polite" id="a11y-live"></span>
 
 <!-- LOGIN SCREEN -->
-<div id="login-screen" role="dialog" aria-modal="true" aria-label="Sign in to Dead-line">
-  <div class="login-logo" aria-hidden="true">Dead-line</div>
+<div id="login-screen" role="dialog" aria-modal="true" aria-label="Sign in to Study">
+  <div class="login-logo" aria-hidden="true">Study</div>
   <div class="login-tagline">Track your focus</div>
   
-  <button class="login-btn google" onclick="signInWithGoogle()">
+  <button class="login-btn google" id="btn-google" onclick="signInWithGoogle()">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
     <span class="login-btn-text">Continue with Google</span>
     <div class="login-spinner"></div>
   </button>
   
-  <button class="login-btn apple" onclick="signInWithApple()">
+  <button class="login-btn apple" id="btn-apple" onclick="signInWithApple()">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
     <span class="login-btn-text">Continue with Apple</span>
     <div class="login-spinner"></div>
@@ -460,7 +460,7 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
   
   <div class="login-divider"><span>or</span></div>
   
-  <button class="login-btn anonymous" onclick="signInAnonymously()">
+  <button class="login-btn anonymous" id="btn-anon" onclick="signInAnonymously()">
     <span class="login-btn-text">Continue without account</span>
     <div class="login-spinner"></div>
   </button>
@@ -473,7 +473,7 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 <!-- DISPLAY NAME MODAL -->
 <div class="name-modal" id="name-modal" role="dialog" aria-modal="true" aria-label="Set your display name">
   <div class="name-card">
-    <div class="name-title">Welcome to Dead-line</div>
+    <div class="name-title">Welcome to Study</div>
     <div class="name-subtitle">Choose a display name for the leaderboard</div>
     <input class="name-input" id="name-inp" type="text" maxlength="20" placeholder="e.g. Alex" autocapitalize="off" autocomplete="off" spellcheck="false" aria-label="Display name"/>
     <div class="name-buttons">
@@ -622,26 +622,18 @@ input[type=range].vslider::-webkit-slider-thumb{-webkit-appearance:none;width:14
 </div>
 
 <script>
-// ═══════════════ FIREBASE INIT ═══════════════
+// ════════════════════════════════════════════════════
+// FIREBASE CONFIG — replace with your own
+// ════════════════════════════════════════════════════
 const firebaseConfig = {
   apiKey: "AIzaSyA9xk2rDZXE9Ro2hbIqfkZwMmQwgY7S3LM",
   authDomain: "deadlines---study-tracker.firebaseapp.com",
   projectId: "deadlines---study-tracker",
   storageBucket: "deadlines---study-tracker.firebasestorage.app",
   messagingSenderId: "679495334937",
-  appId: "1:679495334937:web:9c7cc579bef986542f3e88"
+  appId: "1:679495334937:web:9c7cc579bef986542f3e88",
+  measurementId: "G-E6187M99C2"
 };
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Initialize services
-const db = firebase.firestore();
-const auth = firebase.auth();
-
-
-console.log('Firebase initialized successfully');
-</script>
 
 // ════════════════════════════════════════════════════
 // CONSTANTS
@@ -672,6 +664,7 @@ let pomoRound=0;
 let sessEditTarget=null;
 let _rafPending=false,_lsWriteQ={};
 let _domCache={};
+let db=null;
 let syncUserId=null,syncUsername='';
 let authInitialized=false;
 
@@ -729,96 +722,95 @@ const total=()=>Object.values(log).reduce((a,b)=>a+b,0)+(active?live:0);
 const ssec=name=>active===name?(log[name]||0)+live:(log[name]||0);
 function announce(msg){const el=document.getElementById('a11y-live');if(el)el.textContent=msg;}
 
-// ═══════════════ AUTH FUNCTIONS ═══════════════
+// ════════════════════════════════════════════════════
+// AUTHENTICATION FLOW
+// ════════════════════════════════════════════════════
+function setLoginLoading(btnId, loading){
+  const btn=document.getElementById(btnId);
+  if(btn)btn.classList.toggle('loading',loading);
+  document.querySelectorAll('.login-btn').forEach(b=>b.disabled=loading);
+}
 
-async function signInWithGoogle() {
-  document.getElementById('login-error').textContent = '';
-  const btn = document.querySelector('.login-btn.google');
-  btn.classList.add('loading');
-  try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    const result = await firebase.auth().signInWithPopup(provider);
-    handleAuthUser(result.user);
-  } catch (e) {
-    console.warn('Google sign-in error:', e);
-    document.getElementById('login-error').textContent = 'Sign-in failed. Try anonymous.';
-  } finally {
-    btn.classList.remove('loading');
+function showLoginError(msg){
+  const el=document.getElementById('login-error');
+  if(el)el.textContent=msg;
+  setTimeout(()=>{if(el)el.textContent='';},5000);
+}
+
+function onAuthSuccess(user){
+  syncUserId=user.uid;
+  ssNow('user_id',syncUserId);
+  syncUsername=ls('username','');
+  
+  document.getElementById('login-screen').classList.add('hidden');
+  
+  if(!syncUsername){
+    showNameModal();
+  }else{
+    completeAuthSetup();
   }
 }
 
-async function signInWithApple() {
-  document.getElementById('login-error').textContent = '';
-  const btn = document.querySelector('.login-btn.apple');
-  btn.classList.add('loading');
-  try {
-    const provider = new firebase.auth.OAuthProvider('apple.com');
+function completeAuthSetup(){
+  initFirebase();
+}
+
+async function signInWithGoogle(){
+  showLoginError('');
+  setLoginLoading('btn-google',true);
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    const result=await firebase.auth().signInWithPopup(provider);
+    onAuthSuccess(result.user);
+  }catch(e){
+    console.warn('Google sign-in:',e);
+    if(e.code==='auth/popup-closed-by-user'){
+      // user closed popup, do nothing
+    }else{
+      showLoginError('Google sign-in failed. Check console.');
+    }
+  }finally{
+    setLoginLoading('btn-google',false);
+  }
+}
+
+async function signInWithApple(){
+  showLoginError('');
+  setLoginLoading('btn-apple',true);
+  try{
+    const provider=new firebase.auth.OAuthProvider('apple.com');
     provider.addScope('email');
     provider.addScope('name');
-    const result = await firebase.auth().signInWithPopup(provider);
-    handleAuthUser(result.user);
-  } catch (e) {
-    console.warn('Apple sign-in error:', e);
-    document.getElementById('login-error').textContent = 'Sign-in failed. Try anonymous.';
-  } finally {
-    btn.classList.remove('loading');
+    const result=await firebase.auth().signInWithPopup(provider);
+    onAuthSuccess(result.user);
+  }catch(e){
+    console.warn('Apple sign-in:',e);
+    if(e.code==='auth/popup-closed-by-user'){
+      // user closed popup, do nothing
+    }else{
+      showLoginError('Apple sign-in failed. Check console.');
+    }
+  }finally{
+    setLoginLoading('btn-apple',false);
   }
 }
 
-async function signInAnonymously() {
-  document.getElementById('login-error').textContent = '';
-  try {
-    const result = await firebase.auth().signInAnonymously();
-    handleAuthUser(result.user);
-  } catch (e) {
-    console.warn('Anonymous failed, offline mode:', e);
-    syncUserId = 'local-' + Date.now();
-    syncUsername = 'Guest';
-    ssNow('user_id', syncUserId);
-    ssNow('username', 'Guest');
-    document.getElementById('login-screen').classList.add('hidden');
-    completeAuthSetup();
+async function signInAnonymously(){
+  showLoginError('');
+  setLoginLoading('btn-anon',true);
+  try{
+    const result=await firebase.auth().signInAnonymously();
+    onAuthSuccess(result.user);
+  }catch(e){
+    console.warn('Anonymous sign-in:',e);
+    showLoginError('Sign-in failed. Check your connection.');
+  }finally{
+    setLoginLoading('btn-anon',false);
   }
 }
-
-// ═══════════════ AUTH HANDLER ═══════════════
-
-function handleAuthUser(user) {
-  if (!user) return;
-  
-  syncUserId = user.uid;
-  ssNow('user_id', syncUserId);
-
-  // Prefer Google's display name, then stored name, then prompt
-  if (user.displayName) {
-    syncUsername = user.displayName;
-    ssNow('username', user.displayName);
-  } else {
-    syncUsername = ls('username', '');
-  }
-
-  document.getElementById('login-screen').classList.add('hidden');
-
-  if (!syncUsername || syncUsername === 'Anon' || syncUsername === 'Guest') {
-    showNameModal();
-  } else {
-    completeAuthSetup();
-  }
-}
-
-// ═══════════════ AUTH LISTENERS ═══════════════
-
-
-// Persists login across refreshes
-firebase.auth().onAuthStateChanged(user => {
-  if (user && !document.getElementById('login-screen').classList.contains('hidden')) {
-    handleAuthUser(user);
-  }
-});
 
 // ════════════════════════════════════════════════════
-// NAME MODAL (unchanged logic)
+// NAME MODAL
 // ════════════════════════════════════════════════════
 function showNameModal(){
   document.getElementById('name-modal').classList.add('show');
@@ -842,7 +834,7 @@ function skipName(){
 }
 
 // ════════════════════════════════════════════════════
-// FIREBASE SYNC (unchanged except minor safety check)
+// FIREBASE SYNC
 // ════════════════════════════════════════════════════
 let _syncTimeout=null;
 function queueSync(){
@@ -1001,7 +993,7 @@ function checkDayRollover(){
 }
 
 // ════════════════════════════════════════════════════
-// SOUND ENGINE (unchanged)
+// SOUND ENGINE
 // ════════════════════════════════════════════════════
 function initAudio(){if(audioCtx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;audioCtx=new AC();}
 function mkNoiseBuf(type,dur){
@@ -1068,7 +1060,7 @@ function updateSndUI(){
 }
 
 // ════════════════════════════════════════════════════
-// POMODORO (unchanged)
+// POMODORO
 // ════════════════════════════════════════════════════
 function startPomo(){
   if(pomoRunning)return;
@@ -1112,7 +1104,7 @@ function pomoStop(){
 }
 
 // ════════════════════════════════════════════════════
-// ANALYTICS (unchanged)
+// ANALYTICS
 // ════════════════════════════════════════════════════
 function buildLogMap(){
   const m={};
@@ -1174,7 +1166,7 @@ function checkMilestones(){
 }
 
 // ════════════════════════════════════════════════════
-// INIT APP (local data + firebase init + redirect handling)
+// INIT APP (local data + firebase init)
 // ════════════════════════════════════════════════════
 function initApp(){
   _lightMode=ls('light_mode',false);
@@ -1223,22 +1215,23 @@ function initApp(){
   setInterval(()=>{checkDayRollover();},60000);
   render();
 
- // Enable offline persistence
-db.enablePersistence().catch((err) => {
-  if (err.code === 'failed-precondition') {
-    console.warn('Persistence: multiple tabs');
+  // Init Firebase after local state is ready
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    db.enablePersistence().catch((err)=>{
+      if(err.code==='failed-precondition'){console.warn('Persistence: multiple tabs');}
+      else if(err.code==='unimplemented'){console.warn('Persistence not supported');}
+    });
+    authInitialized=true;
+  }catch(e){
+    console.warn('Firebase init error:',e);
+    setSyncStatus('offline');
   }
-});
+}
 
-// Persist login across page refreshes
-firebase.auth().onAuthStateChanged(user => {
-  if (user && !document.getElementById('login-screen').classList.contains('hidden')) {
-    onAuthSuccess(user);
-  }
-});
-
-  // ════════════════════════════════════════════════════
-// KEYBOARD NAVIGATION (unchanged)
+// ════════════════════════════════════════════════════
+// KEYBOARD NAVIGATION
 // ════════════════════════════════════════════════════
 function handleKeyNav(e){
   if(e.altKey){
@@ -1251,7 +1244,7 @@ function handleKeyNav(e){
 }
 
 // ════════════════════════════════════════════════════
-// THEME (unchanged)
+// THEME
 // ════════════════════════════════════════════════════
 function toggleTheme(){
   _lightMode=!_lightMode;ss('light_mode',_lightMode);
@@ -1264,7 +1257,7 @@ function toggleTheme(){
 }
 
 // ════════════════════════════════════════════════════
-// RAF-THROTTLED TICK (unchanged)
+// RAF-THROTTLED TICK
 // ════════════════════════════════════════════════════
 function tick(){
   live=Math.floor((Date.now()-t0)/1000);
@@ -1296,14 +1289,12 @@ function tickDOM(){
     const p=document.getElementById('pg'+idx);if(p&&tot>0)p.style.width=(ssec(active)/tot*100)+'%';
     const sg2=sgs(active);if(sg2>0){const sf=document.getElementById('sgf'+idx);if(sf)sf.style.width=Math.min(100,ssec(active)/sg2*100)+'%';}
   }
-  /* CHANGED: document.title uses 'Dead-line' when inactive */
   if(active)document.title=fmt(tot)+' · '+active;
-  else document.title='Dead-line';
   updateNav();
 }
 
 // ════════════════════════════════════════════════════
-// RENDER (unchanged except branding in today tab)
+// RENDER
 // ════════════════════════════════════════════════════
 function render(){
   if(tab==='today')renderToday();
@@ -1360,7 +1351,7 @@ function go(t){
 }
 
 // ════════════════════════════════════════════════════
-// TODAY TAB (unchanged)
+// TODAY TAB
 // ════════════════════════════════════════════════════
 function renderToday(){
   const el=document.getElementById('tab-today'),tot=total();
@@ -1416,14 +1407,14 @@ function tap(i){
 }
 
 // ════════════════════════════════════════════════════
-// TIMER (unchanged)
+// TIMER
 // ════════════════════════════════════════════════════
 function startTimer(name){
   if(active)stopTimer();
   active=name;live=0;t0=Date.now();
   persistTimer();vib(60);reqWake();
   ticker=setInterval(tick,1000);
-  document.title=name+' · Dead-line';  /* CHANGED branding */
+  document.title=name+' · Study';
   announce('Started: '+name);
   render();
 }
@@ -1437,7 +1428,7 @@ function stopTimer(){
   clearPersistedTimer();relWake();
   const stopped=active;
   vib([40,30,40]);active=null;live=0;t0=null;
-  document.title='Dead-line';  /* CHANGED branding */
+  document.title='Study';
   announce('Stopped: '+stopped+' — '+fmt(added)+' logged');
   updateBgBar();
   queueSync();
@@ -1445,7 +1436,7 @@ function stopTimer(){
 }
 
 // ════════════════════════════════════════════════════
-// SESSION EDIT MODAL (unchanged)
+// SESSION EDIT MODAL
 // ════════════════════════════════════════════════════
 function openSessModal(){
   sessEditTarget=null;
@@ -1504,7 +1495,7 @@ function deleteSess(dateKey,idx){
 }
 
 // ════════════════════════════════════════════════════
-// CHART TAB (unchanged)
+// CHART TAB
 // ════════════════════════════════════════════════════
 function renderChart(){
   const el=document.getElementById('tab-chart'),now=new Date();
@@ -1588,7 +1579,7 @@ function buildLineSVG(data,xlabs){
 }
 
 // ════════════════════════════════════════════════════
-// STATS TAB (unchanged)
+// STATS TAB
 // ════════════════════════════════════════════════════
 function renderStats(){
   const el=document.getElementById('tab-stats');
@@ -1675,7 +1666,7 @@ function buildPeakSVG(hd){
 }
 
 // ════════════════════════════════════════════════════
-// LEADERBOARD TAB (unchanged)
+// LEADERBOARD TAB
 // ════════════════════════════════════════════════════
 async function renderLB(){
   const el=document.getElementById('tab-lb');
@@ -1718,7 +1709,7 @@ async function renderLB(){
 }
 
 // ════════════════════════════════════════════════════
-// EDIT TAB (unchanged)
+// EDIT TAB
 // ════════════════════════════════════════════════════
 function renderEdit(){
   const el=document.getElementById('tab-edit'),gH=ls('goal_h',6);
@@ -1778,7 +1769,7 @@ function pickC(c){if(cpTarget==null)return;subjects[cpTarget].color=c;ss('subjec
 function closeCP(){document.getElementById('cpov').classList.remove('show');cpTarget=null;}
 
 // ════════════════════════════════════════════════════
-// SETTINGS TAB (unchanged)
+// SETTINGS TAB
 // ════════════════════════════════════════════════════
 function renderSettings(){
   const el=document.getElementById('tab-settings');
@@ -1846,7 +1837,7 @@ function confirmReset(){if(confirm('Delete ALL study data? This cannot be undone
 function resetData(){if(active)stopTimer();localStorage.clear();location.reload();}
 
 // ════════════════════════════════════════════════════
-// SCREENSHOT (unchanged except branding)
+// SCREENSHOT
 // ════════════════════════════════════════════════════
 function takeScreenshot(){
   document.getElementById('shot-ov').classList.add('show');
@@ -1864,7 +1855,7 @@ function drawShot(){
   ctx.fillStyle=isDark?'#0d0d0d':'#ebebeb';
   roundRect(ctx,16,16,W-32,H-32,12);ctx.fill();
   ctx.font='bold 22px ui-monospace,monospace';ctx.fillStyle=isDark?'#e8e8e8':'#111';
-  ctx.fillText('Dead-line',32,52);  /* CHANGED branding */
+  ctx.fillText('Study',32,52);
   ctx.font='10px ui-monospace,monospace';ctx.fillStyle=isDark?'#555':'#888';
   ctx.fillText(new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}),32,70);
   ctx.font='bold 36px ui-monospace,monospace';ctx.fillStyle=isDark?'#C8FF00':'#5a8a00';
@@ -1883,7 +1874,7 @@ function drawShot(){
   });
   const streak=getStreak();
   if(streak>0){ctx.font='11px ui-monospace,monospace';ctx.fillStyle=isDark?'#FF9F40':'#c07000';ctx.fillText('🔥 '+streak+' day streak',32,H-30);}
-  ctx.font='9px ui-monospace,monospace';ctx.fillStyle=isDark?'#2a2a2a':'#aaa';ctx.textAlign='right';ctx.fillText('Dead-line',W-32,H-30);ctx.textAlign='left';  /* CHANGED branding */
+  ctx.font='9px ui-monospace,monospace';ctx.fillStyle=isDark?'#2a2a2a':'#aaa';ctx.textAlign='right';ctx.fillText('Study App',W-32,H-30);ctx.textAlign='left';
   const img=document.getElementById('shot-preview');
   img.src=canvas.toDataURL('image/png');
   img.style.display='block';
@@ -1893,12 +1884,12 @@ function drawShot(){
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
 function downloadShot(){
   const canvas=document.getElementById('shot-canvas');
-  const a=document.createElement('a');a.download='dead-line-'+todayKey()+'.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();document.body.removeChild(a);  /* CHANGED branding */
+  const a=document.createElement('a');a.download='study-'+todayKey()+'.png';a.href=canvas.toDataURL('image/png');document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
 function closeShot(){document.getElementById('shot-ov').classList.remove('show');}
 
 // ════════════════════════════════════════════════════
-// SYNC MODAL (unchanged)
+// SYNC MODAL
 // ════════════════════════════════════════════════════
 function openSyncModal(){
   document.getElementById('sm-name').value=ls('username','');
@@ -1919,7 +1910,7 @@ async function smSave(){
 }
 
 // ════════════════════════════════════════════════════
-// TOAST (unchanged)
+// TOAST
 // ════════════════════════════════════════════════════
 function showToast(msg,type=''){
   const t=document.createElement('div');t.className='toast'+(type?' '+type:'');t.textContent=msg;
@@ -1929,7 +1920,7 @@ function showToast(msg,type=''){
 }
 
 // ════════════════════════════════════════════════════
-// BOOT (unchanged)
+// BOOT
 // ════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
   initApp();
