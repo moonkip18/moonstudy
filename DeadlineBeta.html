@@ -1769,98 +1769,163 @@ function showToast(msg,type=''){
 }
 
 // ════════════════════════════════════════════════════
-// GUN.JS CROSS-DEVICE SYNC (FREE RELAY, NO SETUP)
+// MANUAL WEBRTC SYNC — COPY/PASTE CODES
 // ════════════════════════════════════════════════════
-let gun = null;
-let gunUser = null;
-let gunRoom = null;
-let connectedPeers = new Set();
+let peerConnection = null;
+let dataChannel = null;
 
-// Load Gun from CDN dynamically
-function initGunSync() {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/gun@0.2020.1237/gun.js';
-    script.onload = () => {
-        // Gun loaded, now set up
-        gun = Gun(['https://gun-manhattan.herokuapp.com/gun']); // free public relay
+function setupDataChannel(channel) {
+    channel.onopen = () => {
+        console.log('📡 Peer connected!');
+        setSyncStatus('synced');
+        document.getElementById('sync-dot').className = 'sdot synced';
+        document.getElementById('sync-lbl').textContent = 'connected';
         
-        // Watch for leaderboard entries from other peers
-        gun.get('study-leaderboard').map().on((entry, key) => {
-            if (entry && key && key !== tabId) {
-                localStorage.setItem('lb_entry_' + key, JSON.stringify(entry));
+        // Send our leaderboard entry
+        const key = 'lb_entry_' + tabId;
+        const entry = localStorage.getItem(key);
+        if (entry) channel.send(JSON.stringify({ type: 'lb', key, value: JSON.parse(entry) }));
+    };
+    
+    channel.onmessage = (event) => {
+        try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'lb' && msg.key && msg.value) {
+                localStorage.setItem(msg.key, JSON.stringify(msg.value));
                 broadcastChange({ type: 'leaderboard-changed' });
                 if (tab === 'lb') renderLB();
-                connectedPeers.add(key);
             }
-        });
-        
-        setSyncStatus('synced');
-        console.log('✅ Gun.js cross-device sync ready');
-        updateGunEntry();
+        } catch(e) {}
     };
-    script.onerror = () => {
-        console.warn('Gun.js CDN failed — cross-device sync disabled');
+    
+    channel.onclose = () => {
         setSyncStatus('local');
+        document.getElementById('sync-dot').className = 'sdot';
+        document.getElementById('sync-lbl').textContent = 'disconnected';
     };
-    document.head.appendChild(script);
+    
+    dataChannel = channel;
 }
 
-function updateGunEntry() {
-    if (!gun) return;
-    const todaySec = Object.values(ls('log:'+todayKey(),{})).reduce((a,b)=>a+b,0)+(active?live:0);
-    let weekSec=0;
-    for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);weekSec+=Object.values(ls('log:'+dkeyFor(d),{})).reduce((a,b)=>a+b,0);}
-    weekSec+=active?live:0;
-    const alltimeSec = allTimeSec();
-    const entry = {username:syncUsername||'Anon',today_sec:todaySec,week_sec:weekSec,alltime_sec:alltimeSec,updated_at:Date.now()};
-    
-    // Store locally too
-    localStorage.setItem('lb_entry_'+tabId, JSON.stringify(entry));
-    
-    // Push to Gun
-    gun.get('study-leaderboard').get(tabId).put(entry);
+function broadcastToPeer(data) {
+    if (dataChannel && dataChannel.readyState === 'open') {
+        dataChannel.send(JSON.stringify(data));
+    }
 }
 
-// Override updateLeaderboardEntry to push to Gun
+// Override updateLeaderboardEntry
 const _origUpdateLB = updateLeaderboardEntry;
 updateLeaderboardEntry = function() {
     _origUpdateLB();
-    updateGunEntry();
+    const key = 'lb_entry_' + tabId;
+    const entry = localStorage.getItem(key);
+    if (entry) broadcastToPeer({ type: 'lb', key, value: JSON.parse(entry) });
 };
 
-// Purge old entries
-setInterval(() => {
-    if (!gun) return;
-    gun.get('study-leaderboard').map().once((entry, key) => {
-        if (entry && Date.now() - entry.updated_at > 86400000) {
-            gun.get('study-leaderboard').get(key).put(null);
-            localStorage.removeItem('lb_entry_' + key);
+// Device 1: Create offer
+async function createOffer() {
+    peerConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+    dataChannel = peerConnection.createDataChannel('studySync');
+    setupDataChannel(dataChannel);
+    
+    peerConnection.onicecandidate = (event) => {
+        if (!event.candidate) {
+            // All candidates gathered — show the full offer
+            const offer = btoa(JSON.stringify(peerConnection.localDescription));
+            document.getElementById('sm-offer-text').value = offer;
+            document.getElementById('sm-offer-area').style.display = 'block';
+            document.getElementById('sm-answer-area').style.display = 'none';
+            showToast('📋 Copy this code to the other device', 'info');
         }
-    });
-}, 60000);
+    };
+    
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+}
 
-// Simplify openSyncModal
+// Device 2: Accept offer and create answer
+async function acceptOffer() {
+    const offerText = document.getElementById('sm-answer-input').value.trim();
+    if (!offerText) return;
+    
+    try {
+        peerConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+        
+        peerConnection.ondatachannel = (event) => setupDataChannel(event.channel);
+        
+        peerConnection.onicecandidate = (event) => {
+            if (!event.candidate) {
+                const answer = btoa(JSON.stringify(peerConnection.localDescription));
+                document.getElementById('sm-answer-text').value = answer;
+                document.getElementById('sm-answer-result').style.display = 'block';
+                showToast('📋 Copy this answer back to Device 1', 'info');
+            }
+        };
+        
+        const offer = JSON.parse(atob(offerText));
+        await peerConnection.setRemoteDescription(offer);
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        
+    } catch(e) {
+        showToast('Invalid offer code', 'red');
+    }
+}
+
+// Device 1: Finalize with answer from Device 2
+async function finalizeConnection() {
+    const answerText = document.getElementById('sm-finalize-input').value.trim();
+    if (!answerText) return;
+    
+    try {
+        const answer = JSON.parse(atob(answerText));
+        await peerConnection.setRemoteDescription(answer);
+        showToast('✅ Connected!', 'info');
+        document.getElementById('sync-ov').classList.remove('show');
+    } catch(e) {
+        showToast('Invalid answer code', 'red');
+    }
+}
+
+// Override openSyncModal
 const _origOpenSyncModal = openSyncModal;
 openSyncModal = function() {
     _origOpenSyncModal();
     const existing = document.getElementById('sm-room-section');
     if (existing) existing.remove();
+    
     const roomSection = document.createElement('div');
     roomSection.id = 'sm-room-section';
     roomSection.innerHTML = `
         <div class="sm-row" style="margin-top:12px;">
-            <div class="sm-lbl">Cross-Device Sync</div>
-            <div class="sm-hint">All devices using this app automatically sync via public relay. Just open the app on any device — they'll find each other!</div>
-            <div style="font-size:10px;color:var(--acc);margin-top:4px;">Connected peers: <span id="peer-count">0</span></div>
+            <div class="sm-lbl">Cross-Device Sync (Manual)</div>
+            <div class="sm-hint">Copy/paste codes between devices to connect.</div>
+            
+            <div class="sm-btns" style="margin-bottom:8px;">
+                <button class="sm-btn" onclick="createOffer()">📡 Device 1: Create Code</button>
+                <button class="sm-btn" onclick="document.getElementById('sm-answer-area').style.display='block';document.getElementById('sm-offer-area').style.display='none';">📥 Device 2: Enter Code</button>
+            </div>
+            
+            <!-- Device 1: Shows offer -->
+            <div id="sm-offer-area" style="display:none;">
+                <textarea id="sm-offer-text" class="sm-inp" readonly style="height:60px;font-size:9px;word-break:break-all;margin-top:8px;" placeholder="Your code will appear here..."></textarea>
+                <div class="sm-hint">Copy this ENTIRE code → send to Device 2 → then paste their answer below:</div>
+                <input id="sm-finalize-input" class="sm-inp" placeholder="Paste Device 2's answer here" style="margin-top:8px;"/>
+                <button class="sm-btn primary" onclick="finalizeConnection()" style="margin-top:8px;">Complete Connection</button>
+            </div>
+            
+            <!-- Device 2: Enter offer -->
+            <div id="sm-answer-area" style="display:none;">
+                <input id="sm-answer-input" class="sm-inp" placeholder="Paste Device 1's code here" style="margin-top:8px;"/>
+                <button class="sm-btn primary" onclick="acceptOffer()" style="margin-top:8px;">Accept & Generate Answer</button>
+                <div id="sm-answer-result" style="display:none;margin-top:8px;">
+                    <textarea id="sm-answer-text" class="sm-inp" readonly style="height:60px;font-size:9px;word-break:break-all;" placeholder="Your answer code..."></textarea>
+                    <div class="sm-hint">Copy this code and send it back to Device 1</div>
+                </div>
+            </div>
         </div>
     `;
     document.querySelector('#sync-ov .ovsh').appendChild(roomSection);
-    
-    // Update peer count
-    setInterval(() => {
-        const count = document.getElementById('peer-count');
-        if (count) count.textContent = connectedPeers.size;
-    }, 2000);
 };
 
 // ════════════════════════════════════════════════════
@@ -1868,7 +1933,6 @@ openSyncModal = function() {
 // ════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
     initApp();
-    initGunSync(); // Start cross-device sync after app loads
 });
 
 if(ls('light_mode',false)){document.body.classList.add('light');const b=document.getElementById('theme-btn');if(b)b.textContent='🌙';}
