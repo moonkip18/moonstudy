@@ -1769,96 +1769,235 @@ function showToast(msg,type=''){
 }
 
 // ════════════════════════════════════════════════════
-// YJS + WEBRTC SYNC (CROSS-DEVICE) – FIXED CDN FALLBACK
+// SIMPLE WEBRTC SYNC — NO LIBRARIES, CROSS-DEVICE
 // ════════════════════════════════════════════════════
-let ydoc = null, yProvider = null, yLeaderboard = null;
+let peerConnections = []; // multiple peers can connect
+let dataChannels = [];
+let isHost = false;
+let roomCode = '';
 
-async function initYjsSync() {
-    let Y, WebrtcProvider;
-    
-    // Try multiple CDNs for Yjs
-    const yjsCDNs = [
-        'https://cdn.jsdelivr.net/npm/yjs@13.6.8/+esm',
-        'https://unpkg.com/yjs@13.6.8/dist/yjs.mjs'
-    ];
-    for (const url of yjsCDNs) {
-        try {
-            Y = await import(url);
-            break;
-        } catch(e) { console.warn('Yjs import failed from:', url, e); }
-    }
-    if (!Y) {
-        console.warn('Yjs sync unavailable – all CDNs failed');
-        setSyncStatus('local');
-        return;
-    }
-
-    // Try multiple CDNs for y-webrtc
-    const webrtcCDNs = [
-        'https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/bin/y-webrtc.js',
-        'https://unpkg.com/y-webrtc@10.3.0/bin/y-webrtc.js'
-    ];
-    for (const url of webrtcCDNs) {
-        try {
-            ({ WebrtcProvider } = await import(url));
-            break;
-        } catch(e) { console.warn('y-webrtc import failed from:', url, e); }
-    }
-    if (!WebrtcProvider) {
-        console.warn('WebRTC sync unavailable – all CDNs failed');
-        setSyncStatus('local');
-        return;
-    }
-
-    // Yjs + WebRTC ready – create shared document
-    try {
-        ydoc = new Y.Doc();
-        yProvider = new WebrtcProvider('study-dashboard-room', ydoc, {
-            signaling: ['wss://signaling.yjs.dev'],
-            password: null,
-            awareness: new Y.Awareness(ydoc),
-            maxConns: 20,
-        });
-        yLeaderboard = ydoc.getMap('leaderboard');
-        
-        // When remote data arrives, sync to localStorage and refresh UI
-        yLeaderboard.observe(() => {
-            yLeaderboard.forEach((entry, key) => {
-                try { localStorage.setItem(key, JSON.stringify(entry)); } catch(e) {}
-            });
-            broadcastChange({ type: 'leaderboard-changed' });
-            if (tab === 'lb') renderLB();
-        });
-        
-        // Override updateLeaderboardEntry to also push to Yjs map
-        const originalUpdate = updateLeaderboardEntry;
-        updateLeaderboardEntry = function() {
-            originalUpdate();
-            const key = 'lb_entry_' + tabId;
-            const entry = JSON.parse(localStorage.getItem(key));
-            if (entry && yLeaderboard) yLeaderboard.set(key, entry);
-        };
-        
-        // Purge old entries every 60s
-        setInterval(() => {
-            if (!yLeaderboard) return;
-            yLeaderboard.forEach((entry, key) => {
-                if (Date.now() - entry.updated_at > 86400000) {
-                    yLeaderboard.delete(key);
-                    localStorage.removeItem(key);
-                }
-            });
-        }, 60000);
-        
-        setSyncStatus('synced');
-        console.log('Yjs WebRTC sync initialized (cross-device ready)');
-    } catch(e) {
-        console.warn('Yjs sync setup failed:', e);
-        setSyncStatus('local');
-    }
+// Generate a random 6-character room code
+function generateRoomCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-// Call Yjs init after basic setup
+// Setup a data channel (either created or received)
+function setupDataChannel(channel, peerId) {
+    channel.onopen = () => {
+        console.log('📡 Connected to peer:', peerId);
+        setSyncStatus('synced');
+        // Send our current leaderboard entry
+        const key = 'lb_entry_' + tabId;
+        const entry = localStorage.getItem(key);
+        if (entry) {
+            channel.send(JSON.stringify({ type: 'leaderboard-update', key: key, value: JSON.parse(entry) }));
+        }
+    };
+    
+    channel.onmessage = (event) => {
+        try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'leaderboard-update' && msg.key && msg.value) {
+                localStorage.setItem(msg.key, JSON.stringify(msg.value));
+                broadcastChange({ type: 'leaderboard-changed' });
+                if (tab === 'lb') renderLB();
+            }
+        } catch(e) {}
+    };
+    
+    channel.onclose = () => {
+        console.log('Peer disconnected:', peerId);
+    };
+    
+    dataChannels.push(channel);
+}
+
+// Broadcast leaderboard update to all connected peers
+function broadcastToPeers(data) {
+    dataChannels.forEach(channel => {
+        if (channel.readyState === 'open') {
+            channel.send(JSON.stringify(data));
+        }
+    });
+}
+
+// Override updateLeaderboardEntry to also broadcast
+const originalUpdateLeaderboardEntry = updateLeaderboardEntry;
+updateLeaderboardEntry = function() {
+    originalUpdateLeaderboardEntry();
+    const key = 'lb_entry_' + tabId;
+    const entry = localStorage.getItem(key);
+    if (entry) {
+        broadcastToPeers({ type: 'leaderboard-update', key: key, value: JSON.parse(entry) });
+    }
+};
+
+// Start hosting a room (device 1)
+async function hostRoom() {
+    roomCode = generateRoomCode();
+    isHost = true;
+    
+    showToast('📡 Hosting room: ' + roomCode + ' — share this code', 'info');
+    document.getElementById('sync-lbl').textContent = 'HOST ' + roomCode;
+    document.getElementById('sync-dot').className = 'sdot synced';
+    
+    // Store the offer in localStorage so the joining device can find it
+    // We'll poll for the answer
+    localStorage.setItem('_room_code', roomCode);
+    localStorage.setItem('_is_host', 'true');
+    
+    console.log('Hosting room:', roomCode);
+    console.log('Other device: open the app, go to Settings, and enter code:', roomCode);
+}
+
+// Join an existing room (device 2)
+async function joinRoom(code) {
+    roomCode = code.toUpperCase();
+    isHost = false;
+    
+    // Create peer connection
+    const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+    
+    pc.ondatachannel = (event) => {
+        setupDataChannel(event.channel, 'host');
+    };
+    
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            // Store candidates for the host to read
+            const candidates = JSON.parse(localStorage.getItem('_ice_candidates_joiner') || '[]');
+            candidates.push(event.candidate);
+            localStorage.setItem('_ice_candidates_joiner', JSON.stringify(candidates));
+        }
+    };
+    
+    // Wait for host to create offer (poll localStorage)
+    const checkInterval = setInterval(async () => {
+        const hostOffer = localStorage.getItem('_host_offer');
+        if (hostOffer) {
+            clearInterval(checkInterval);
+            try {
+                await pc.setRemoteDescription(JSON.parse(hostOffer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                localStorage.setItem('_joiner_answer', JSON.stringify(answer));
+                localStorage.setItem('_room_code', roomCode);
+                document.getElementById('sync-lbl').textContent = 'JOINED ' + roomCode;
+                document.getElementById('sync-dot').className = 'sdot synced';
+                setSyncStatus('synced');
+                showToast('📡 Joined room: ' + roomCode, 'info');
+            } catch(e) {
+                console.error('Failed to join:', e);
+                showToast('Failed to join room', 'red');
+            }
+        }
+    }, 1000);
+    
+    // Stop checking after 30 seconds
+    setTimeout(() => clearInterval(checkInterval), 30000);
+    
+    peerConnections.push(pc);
+}
+
+// Host creates offer and waits for joiner's answer
+async function completeHostConnection() {
+    if (!isHost) return;
+    
+    const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+    
+    const channel = pc.createDataChannel('studySync');
+    setupDataChannel(channel, 'joiner');
+    
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            const candidates = JSON.parse(localStorage.getItem('_ice_candidates_host') || '[]');
+            candidates.push(event.candidate);
+            localStorage.setItem('_ice_candidates_host', JSON.stringify(candidates));
+        }
+    };
+    
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    localStorage.setItem('_host_offer', JSON.stringify(offer));
+    
+    // Wait for joiner's answer
+    const checkInterval = setInterval(async () => {
+        const joinerAnswer = localStorage.getItem('_joiner_answer');
+        if (joinerAnswer) {
+            clearInterval(checkInterval);
+            try {
+                await pc.setRemoteDescription(JSON.parse(joinerAnswer));
+                console.log('✅ Host connection complete');
+            } catch(e) {
+                console.error('Host connection failed:', e);
+            }
+        }
+    }, 1000);
+    
+    setTimeout(() => clearInterval(checkInterval), 30000);
+    peerConnections.push(pc);
+}
+
+// Open sync modal to enter room code
+function openSyncModal() {
+    document.getElementById('sync-ov').classList.add('show');
+    document.getElementById('sm-name').value = syncUsername;
+    
+    // Add room code section
+    const existingRoomSection = document.getElementById('sm-room-section');
+    if (existingRoomSection) existingRoomSection.remove();
+    
+    const roomSection = document.createElement('div');
+    roomSection.id = 'sm-room-section';
+    roomSection.innerHTML = `
+        <div class="sm-row" style="margin-top:12px;">
+            <div class="sm-lbl">Room Code (for cross-device sync)</div>
+            <div style="display:flex;gap:8px;">
+                <input class="sm-inp" id="sm-room-code" type="text" maxlength="6" placeholder="Enter code" style="text-transform:uppercase;" autocapitalize="off" autocomplete="off" spellcheck="false"/>
+            </div>
+            <div class="sm-hint">Device 1: click "Host" and share the code.<br>Device 2: enter the code and click "Join".</div>
+            <div class="sm-btns">
+                <button class="sm-btn" onclick="hostRoom()">Host New Room</button>
+                <button class="sm-btn primary" onclick="joinEnteredRoom()">Join Room</button>
+            </div>
+        </div>
+    `;
+    document.querySelector('#sync-ov .ovsh').appendChild(roomSection);
+    
+    setTimeout(()=>document.getElementById('sm-name').focus(),80);
+}
+
+function joinEnteredRoom() {
+    const code = document.getElementById('sm-room-code').value.trim();
+    if (!code || code.length < 4) {
+        document.getElementById('sm-status').textContent = 'Enter a valid room code';
+        document.getElementById('sm-status').className = 'sm-status err';
+        return;
+    }
+    joinRoom(code);
+    document.getElementById('sm-status').textContent = 'Connecting to room ' + code + '...';
+    document.getElementById('sm-status').className = 'sm-status';
+}
+
+function smSave() {
+    const name = document.getElementById('sm-name').value.trim();
+    if (name) {
+        syncUsername = name;
+        ssNow('username', name);
+        updateLeaderboardEntry();
+    }
+    closeSyncModal();
+}
+
+function closeSyncModal() {
+    document.getElementById('sync-ov').classList.remove('show');
+}
+
+// Call init after basic setup
 function initApp(){
     _lightMode=ls('light_mode',false);
     if(_lightMode)document.body.classList.add('light');
@@ -1906,7 +2045,14 @@ function initApp(){
     setInterval(()=>{checkDayRollover();},60000);
 
     initBroadcastChannel();
-    initYjsSync();   // <-- cross-device sync (tries multiple CDNs)
+
+    // Check if we were in a room before
+    const savedCode = localStorage.getItem('_room_code');
+    if (savedCode && localStorage.getItem('_is_host') === 'true') {
+        roomCode = savedCode;
+        isHost = true;
+        completeHostConnection();
+    }
 
     if(!ls('username',null)||ls('username','')===''){
         showNameModal();
