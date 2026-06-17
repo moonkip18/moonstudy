@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extreme Performance Protocol</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --surface: #ffffff;
+            --border: #e4e4e7;
+            --text-primary: #18181b;
+            --text-secondary: #71717a;
+            --accent-bg: #f4f4f5;
+            --accent-border: #a1a1aa;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #09090b;
+                --surface: #18181b;
+                --border: #27272a;
+                --text-primary: #f4f4f5;
+                --text-secondary: #a1a1aa;
+                --accent-bg: #27272a;
+                --accent-border: #71717a;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 16px;
+            line-height: 1.4;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin: 0 0 6px 0;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .disclaimer {
+            background-color: var(--accent-bg);
+            border-left: 3px solid var(--text-primary);
+            padding: 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            font-size: 12px;
+        }
+
+        th {
+            color: var(--text-secondary);
+            text-align: left;
+            padding: 10px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .time {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .duration {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .activity {
+            font-weight: 600;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--text-primary);
+        }
+
+        .footer {
+            margin-top: 32px;
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 640px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            
+            thead {
+                display: none;
+            }
+
+            tr {
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 12px;
+                background: var(--bg);
+            }
+
+            td {
+                border: none;
+                padding: 4px 0;
+                position: relative;
+                padding-left: 30%;
+            }
+
+            td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0;
+                width: 25%;
+                font-weight: 600;
+                font-size: 10px;
+                text-transform: uppercase;
+                color: var(--text-secondary);
+            }
+
+            td.protocol {
+                padding-left: 0;
+                margin-top: 8px;
+                border-top: 1px dashed var(--border);
+                padding-top: 8px;
+            }
+
+            td.protocol::before {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Extreme Performance Protocol</h1>
+        <p class="subtitle">Actionable 24-Hour Mobile Timeline (Light & Dark System-Adaptive)</p>
+    </header>
+
+    <div class="disclaimer">
+        IMPORTANT: Intended exclusively for high-stakes 20-day sprint windows. Not sustainable long-term. Take with caution.
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 15%">Time</th>
+                <th style="width: 10%">Dur.</th>
+                <th style="width: 25%">Activity</th>
+                <th style="width: 50%">Nutritional & Supplement Stack</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td data-label="Time" class="time">03:30 - 03:45 AM</td>
+                <td data-label="Duration" class="duration">15 Min</td>
+                <td data-label="Activity" class="activity">Wake & Light</td>
+                <td data-label="Protocol" class="protocol"><strong>Morning Stack:</strong> 10g Creatine, 5g L-Tyrosine, 300mg Alpha-GPC, 100mg Caffeine + 200mg L-Theanine. Immediate exposure to 10,000 lux light[span_121](start_span)[span_121](end_span).</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">03:45 - 08:30 AM</td>
+                <td data-label="Duration" class="duration">4.75 H</td>
+                <td data-label="Activity" class="activity">Study Block 1</td>
+                <td data-label="Protocol" class="protocol">Hydrate with 1L water containing electrolytes (sodium, potassium).</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">08:30 - 08:45 AM</td>
+                <td data-label="Duration" class="duration">15 Min</td>
+[span_4](start_span)[span_4](end_span)     [span_6](start_span)[span_6](end_span)       [span_8](start_span)[span_8](end_span)    <td data-label="Activ[span_10](start_span)[span_10](end_span)ity" class="activity">Intermission</td>
+                <td data-label="Protocol" class="protocol"><strong>Meal 1:</strong> Lean protein (eggs/turkey), oatmeal, 4g Omega-3 Fatty Acids.</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">08:45 - 01:15 PM</td>
+                <td data-label="Duration" class="duration">4.50 H</td>
+                <td data-label="Activity" class="activity">Study Block 2</td>
+                <td data-label="Protocol" class="protocol">Hydration: Pure water (completely caffeine-free).</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">01:15 - 01:35 PM</td>
+                <td data-label="Duration" class="duration">20 Min</td>
+                <td data-label="Activity" class="activity">Caffeine N[span_15](start_span)[span_15](end_span)ap</td>
+                <td data-label="Protocol" class="protocol"><strong>Nap Trigger:</strong> 100mg Caffeine + 200mg L-Theanine immediately before lying down. Wake up as caffeine absorption begins.</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">01:35 - 01:45 PM</td>
+                <td data-label="Duration" class="duration">10 Min</td>
+                <td data-label="Activity" class="activity">Recovery</td>
+                <td data-label="Protocol" class="protocol"><strong>Meal 2:</strong> Fast-digesting amino acids + simple carbohydrates. Clear sleep inertia with light movement.</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">01:45 - 05:45 PM</[span_21](start_span)[span_21](end_span)[span_23](start_span)[span_23](end_span)td>
+                <td data-label="Duration" class="duration">4.00 H</td>
+                <td data-label="Activity" class="activity">Study Block 3</td>
+                <td data-label="Protocol" class="protocol"><strong>Midday Stack:</strong> 10g Creatine, 5g L-Tyrosine, 300mg Alpha-GPC.</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">05:45 - 06:00 PM</td>
+                <td class="duration">15 Min</td>
+                <td class="activity">Intermission</td>
+                <td data-label="Protocol" class="protocol"><strong>Meal 3:</strong> Chicken/fish with sweet potato or brown rice.</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">06:00 - 09:30 PM</td>
+                <td data-label="Duration" class="duration">3.50 H<[span_29](start_span)[span_29](end_span)[span_31](start_span)[span_31](end_span)[span_33](start_span)[span_33](end_span)/td>
+                <td data-label="Activity" class="activity">Study Block 4</td>
+                <td data-label="Protocol" class="protocol">Focus on overlearning critical concepts[span_122](start_span)[span_122](end_span). No stimulants or caffeine.</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">09:30 - 11:00 PM</td>
+                <td data-label="Duration" class="duration">1.50 H</td>
+                <td data-label="Activity" class="activity">Gym Block</td>
+                <td data-label="Protocol" class="protocol">Moderate intensity training (MIE). Avoid HIIT. Hydrate with water.</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">11:00 - 11:15 PM</td>
+          [span_37](start_span)[span_37](end_span)[span_39](start_span)[span_39](end_span)      <td data-label="Duration"[span_93](start_span)[span_93](end_span)[span_95](start_span)[span_95](end_span) [span_97](start_span)[span_97](end_span)class="duration">15 Min</td>
+                <td data-label="Activity" class="activity">Thermal Prep</td>
+                <td data-label="Protocol" class="protocol">Immediate hot shower or bath (40°C to 42°C) to dilate blood vessels and trigger core cooling[span_123](start_span)[span_123](end_span)[span_124](start_span)[span_124](end_span).</td>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">11:15 - 11:30 PM</td>
+                <td data-label="Duration" class="duration">15 Min</td>
+                <td class="activity">Endocrine Feed</td>
+                <td data-label="Protocol" class="protocol"><strong>Sleep Stack:</strong> 25g Alpha-lactalbumin whey protein + 50g high-GI carbs[span_125](start_span)[span_125](end_span)[span_126](start_span)[span_126](end_span), 3g Glycine, 400mg Magnesium Glycinate, 600mg Tart Cherry Extract[span_127](start_span)[span_127](end_span).</t[span_43](start_span)[span_43](end_span)[span_45](start_span)[span_45](end_span)d>
+            </tr>
+            <tr>
+                <td data-label="Time" class="time">11:30 - 03:30 AM</td>
+                <td data-label="Duration" class="duration">4.00 H</td>
+                <td class="activity">Sleep Block</td>
+                <td data-label="Protocol" class="protocol">Pitch-black, quiet, cooled to 16°C to 19°C[span_128](start_span)[span_128](end_span). Optional warming eye-mask to accelerate sleep onse[span_58](start_span)[span_58](end_span)t.</td>
+        [span_60](start_span)[span_60](end_span)    </tr>
+        </tbody>
+    </table>
+
+    <div class="section-title">Essential Circadian Controls</div>
+    <ul>
+        <li><strong>Morning Reset:</strong> Expose eyes to bright li[span_102](start_span)[span_102](end_span)ght therapy directly at 03:30 AM[span_129](start_span)[span_129](end_span)[span_130](start_span)[span_130](end_span).</li>
+        <li><strong>Daytime Vigilance:</strong> Alternating 30-minute pulses of bright and dim light sustains objective focus.</li>
+        <li><strong>Evening Screen Barrier:</strong> Blue-blocking glasses must go on at 11:00 PM onwards.</li>
+    </ul>
+
+    <div class="section-title">Late-Night Workout Mitigation</div>
+    <ul>
+        <li><strong>Thermal Cycle:</strong> Hot shower (40°C to 42°C) forces core heat loss[span_131](start_span)[span_131](end_span)[span_132](start_span)[span_132](end_span), triggering biological sleep signs[span_133](start_span)[span_133](end_span).</li>
+        <li><strong>Tryptophan Transfer:</strong> High-GI carbohydrat[span_71](start_span)[span_71](end_span)[span_73](start_span)[span_73](end_span)e insulin surge pulls other amino acids away[span_134](start_span)[span_134](end_span)[span_135](start_span)[span_135](end_span)[span_136](start_span)[span_136](end_span), facilitating smooth tryptophan brain transport[span_137](start_span)[span_137](end_span)[span_138](start_span)[span_138](end_span).[span_75](start_span)[span_75](end_span)[span_77](start_span)[span_77](end_span)[span_79](start_span)[span_79](end_span)</li>
+        <li><strong>CNS Down-Regulation:</strong> Glycine and Magnesium directly lower core body temperature and calm central nervous system activity[span_139](start_span)[span_139](end_span)[span_140](start_span)[span_140](end_span).</li>
+    </ul>
+
+    <div class="footer">
+        This is for informational purposes only. For medical advice or diagnosis, consult a professional.<br>
+        Optimized Mobile Timeline. Ready for Execution.
+    </div>
+</div>
+
+</body>
+                  </html>
+                  
