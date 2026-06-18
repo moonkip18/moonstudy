@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NEURO-WAKE // MATRIX ENGINE</title>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#020402; }
+
+body {
+  font-family: 'Courier New', Courier, monospace;
+  color: #39FF14;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+
+/* ── SCREEN LIFECYCLE ── */
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s steps(4);
+  overflow-y: auto; overflow-x: hidden;
+  background: #020402;
+}
+.screen.active { opacity:1; pointer-events:all; }
+
+/* ── MATRIX TERMINAL UI SYSTEM ── */
+.btn-primary {
+  width: 100%; padding: 16px; border-radius: 4px; border: 1px solid #39FF14;
+  background: rgba(57, 255, 20, 0.15); color: #39FF14; font-size: 14px; font-weight: 700;
+  font-family: 'Courier New', Courier, monospace; cursor: pointer;
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); text-transform: uppercase; letter-spacing: 1px;
+}
+.btn-primary:active { background: #39FF14; color: #020402; box-shadow: 0 0 20px #39FF14; }
+
+.btn-ghost {
+  background: transparent; border: 1px solid rgba(57, 255, 20, 0.3);
+  color: rgba(57, 255, 20, 0.6); border-radius: 4px;
+  padding: 12px; font-size: 12px; font-family: 'Courier New', Courier, monospace;
+  cursor: pointer; width: 100%; text-transform: uppercase;
+}
+.btn-ghost:active { background: rgba(57, 255, 20, 0.05); color: #39FF14; }
+
+.screen-inner {
+  width: 100%; max-width: 390px;
+  display: flex; flex-direction: column;
+  padding: 40px 24px; min-height: 100%;
+}
+
+/* ── MEQ PROFILE BUILDER ── */
+#meq { justify-content: flex-start; }
+.meq-header { margin-bottom: 24px; border-bottom: 1px dashed rgba(57, 255, 20, 0.3); padding-bottom: 16px; }
+.meq-header h1 { font-size: 22px; font-weight: 800; letter-spacing: -1px; text-transform: uppercase; }
+.meq-header p { font-size: 11px; color: rgba(57, 255, 20, 0.6); margin-top: 6px; line-height: 1.4; }
+.meq-progress { width: 100%; height: 4px; background: rgba(57, 255, 20, 0.1); margin-bottom: 24px; }
+.meq-prog-fill { height: 100%; background: #39FF14; width: 0%; box-shadow: 0 0 8px #39FF14; }
+.meq-q { font-size: 13px; font-weight: 600; line-height: 1.5; margin-bottom: 20px; text-transform: uppercase; }
+.meq-options { display: flex; flex-direction: column; gap: 8px; }
+.meq-opt {
+  padding: 14px; border-radius: 4px; border: 1px solid rgba(57, 255, 20, 0.2);
+  background: rgba(0, 0, 0, 0.6); color: rgba(57, 255, 20, 0.8); font-size: 12px;
+  font-family: 'Courier New', Courier, monospace; cursor: pointer; text-align: left;
+}
+.meq-opt.selected { border-color: #39FF14; background: rgba(57, 255, 20, 0.1); color: #39FF14; box-shadow: 0 0 8px rgba(57, 255, 20, 0.2); }
+.meq-nav { display: flex; gap: 10px; margin-top: 20px; }
+
+/* ── CORE DASHBOARD ── */
+#home { justify-content: flex-start; }
+.home-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; font-size: 11px; }
+.home-greeting { color: rgba(57, 255, 20, 0.5); text-transform: uppercase; }
+.home-time { font-weight: bold; }
+.home-clock { font-size: 58px; font-weight: 800; letter-spacing: -2px; line-height: 1; margin-bottom: 4px; text-shadow: 0 0 10px rgba(57, 255, 20, 0.3); }
+.home-date { font-size: 11px; color: rgba(57, 255, 20, 0.5); margin-bottom: 24px; text-transform: uppercase; }
+
+.readiness-card {
+  background: rgba(57, 255, 20, 0.03); border: 1px dashed rgba(57, 255, 20, 0.4);
+  border-radius: 4px; padding: 16px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px;
+}
+.rc-row { display: flex; align-items: center; justify-content: space-between; }
+.rc-label { font-size: 10px; color: rgba(57, 255, 20, 0.6); letter-spacing: 0.5px; }
+.rc-value { font-size: 20px; font-weight: bold; color: #39FF14; }
+.rc-sub { font-size: 11px; color: rgba(57, 255, 20, 0.5); }
+.rc-bar { width: 100%; height: 4px; background: rgba(57, 255, 20, 0.1); overflow: hidden; }
+.rc-bar-fill { height: 100%; background: #39FF14; box-shadow: 0 0 6px #39FF14; transition: width 0.4s ease; }
+
+.streak-row { display: flex; align-items: center; gap: 6px; margin-bottom: 24px; justify-content: space-between; }
+.streak-day {
+  width: 32px; height: 32px; border: 1px solid rgba(57, 255, 20, 0.2); background: transparent;
+  display: flex; align-items: center; justify-content: center; font-size: 10px; color: rgba(57, 255, 20, 0.4);
+}
+.streak-day.done { border-color: rgba(57, 255, 20, 0.6); background: rgba(57, 255, 20, 0.1); color: #39FF14; }
+.streak-day.today-done { border-color: #39FF14; background: #39FF14; color: #020402; font-weight: bold; box-shadow: 0 0 10px #39FF14; }
+
+.dur-pills { display: flex; gap: 8px; margin-bottom: 16px; }
+.dur-pill {
+  flex: 1; padding: 10px 0; border: 1px dashed rgba(57, 255, 20, 0.3); background: transparent;
+  color: rgba(57, 255, 20, 0.5); font-family: 'Courier New', Courier, monospace; font-size: 12px; cursor: pointer;
+}
+.dur-pill.active { border-style: solid; border-color: #39FF14; background: rgba(57, 255, 20, 0.1); color: #39FF14; }
+
+.sleep-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px dashed rgba(57, 255, 20, 0.2); margin-bottom: 16px; }
+.sleep-row-label { font-size: 11px; color: rgba(57, 255, 20, 0.6); text-transform: uppercase; }
+.sleep-time-btns { display: flex; gap: 6px; }
+.sleep-time-btn {
+  background: transparent; border: 1px solid rgba(57, 255, 20, 0.3); color: rgba(57, 255, 20, 0.6);
+  font-family: 'Courier New', Courier, monospace; font-size: 11px; padding: 4px 8px; cursor: pointer;
+}
+.sleep-time-btn.active { border-color: #39FF14; background: rgba(57, 255, 20, 0.15); color: #39FF14; }
+
+/* ── PRE-WAKE COLD RUN-UP ── */
+#cold-prep { justify-content: center; }
+.cold-inner { width: 100%; max-width: 390px; padding: 0 24px; display: flex; flex-direction: column; align-items: center; }
+.cold-ring { width: 120px; height: 120px; border: 1px dashed rgba(57, 255, 20, 0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; position: relative; }
+.cold-ring-svg { position: absolute; inset: -1px; transform: rotate(-90deg); }
+.cold-track { fill:none; stroke: rgba(57, 255, 20, 0.05); stroke-width: 2; }
+.cold-prog { fill:none; stroke: #39FF14; stroke-width: 2; transition: stroke-dashoffset 1s linear; }
+.cold-num { font-size: 38px; font-weight: bold; }
+.cold-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+.cold-sub { font-size: 11px; color: rgba(57, 255, 20, 0.6); text-align: center; line-height: 1.5; margin-bottom: 24px; }
+
+/* ── PHASES OF HIGH-INTENSITY WAKING ── */
+#session { background: #000; justify-content: center; position: relative; }
+#light-field { position: absolute; inset: 0; background: #000; z-index: 1; pointer-events: none; }
+.session-ui { position: relative; z-index: 5; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 32px 20px; }
+.sess-top { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+.saccade-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(0,0,0,0.8); padding: 6px; border: 1px dashed rgba(57,255,20,0.2); }
+.saccade-track { width: 100%; height: 2px; background: rgba(57, 255, 20, 0.15); position: relative; }
+.saccade-ball { width: 10px; height: 10px; background: #39FF14; position: absolute; top: -4px; left: 0; animation: saccadeMove 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite; box-shadow: 0 0 8px #39FF14; }
+@keyframes saccadeMove { 0%, 100% { left: 0; } 50% { left: calc(100% - 10px); } }
+.saccade-label { font-size: 8px; letter-spacing: 1px; color: rgba(57, 255, 20, 0.5); text-transform: uppercase; }
+
+.sess-timer-small { display: flex; align-items: baseline; gap: 6px; background: rgba(0,0,0,0.8); padding: 4px 12px; border: 1px solid rgba(57,255,20,0.3); }
+.sess-time-num { font-size: 32px; font-weight: bold; color: #39FF14; text-shadow: 0 0 5px #39FF14; }
+.sess-phase { font-size: 9px; letter-spacing: 1px; color: #39FF14; text-transform: uppercase; font-weight: bold; }
+
+/* NEURO-REFLEX COGNITIVE MATRIX GRID */
+.game-arena { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; position: relative; }
+.game-score-row { display: flex; align-items: center; gap: 16px; background: rgba(0,0,0,0.9); padding: 6px 12px; border: 1px dashed rgba(57,255,20,0.4); opacity: 0; transition: opacity 0.3s; }
+.game-score-row.show { opacity: 1; }
+.gs-item { display: flex; flex-direction: column; align-items: center; }
+.gs-val { font-size: 16px; font-weight: bold; color: #39FF14; }
+.gs-lbl { font-size: 8px; color: rgba(57, 255, 20, 0.6); text-transform: uppercase; }
+.gs-sep { width: 1px; height: 16px; background: rgba(57, 255, 20, 0.3); }
+.target-zone { width: 100%; height: 180px; position: relative; border: 1px solid rgba(57, 255, 20, 0.1); background: rgba(0, 0, 0, 0.6); opacity: 0; transition: opacity 0.5s; overflow: hidden; }
+.target-zone.show { opacity: 1; }
+
+.target-dot { position: absolute; width: 36px; height: 36px; border: 2px solid #39FF14; background: rgba(57,255,20,0.2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #39FF14; cursor: pointer; box-shadow: 0 0 12px #39FF14; }
+.target-dot::before { content: '[]'; font-size: 8px; }
+.ripple { position: absolute; border: 1px solid #39FF14; animation: rippleOut 0.4s ease-out forwards; pointer-events: none; }
+@keyframes rippleOut { from { width: 36px; height: 36px; opacity: 1; transform: translate(-50%,-50%); } to { width: 90px; height: 90px; opacity: 0; transform: translate(-50%,-50%); } }
+.miss-flash { position: absolute; inset: 0; background: rgba(255, 0, 0, 0.25); animation: missFlash 0.2s ease-out forwards; pointer-events: none; }
+@keyframes missFlash { from { opacity:1; } to { opacity:0; } }
+.hit-float { position: absolute; font-size: 10px; font-weight: bold; color: #fff; background:#39FF14; color:#000; padding:1px 3px; pointer-events: none; animation: floatUp 0.5s ease-out forwards; }
+@keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-25px); } }
+
+/* SYNCED BREATH ENGINE */
+.breath-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; opacity: 0; transition: opacity 0.5s; background: rgba(0,0,0,0.8); padding: 8px; border: 1px solid rgba(57,255,20,0.2); }
+.breath-wrap.show { opacity: 1; }
+.breath-arc { width: 36px; height: 36px; border: 1px solid rgba(57, 255, 20, 0.4); display: flex; align-items: center; justify-content: center; animation: breathArc 5s ease-in-out infinite; }
+@keyframes breathArc { 0%, 100% { transform: scale(0.7); border-color: rgba(57,255,20,0.3); } 40%, 60% { transform: scale(1.3); border-color: #39FF14; box-shadow: 0 0 8px #39FF14; } }
+.breath-dot { width: 6px; height: 6px; background: #39FF14; animation: breathDot 5s ease-in-out infinite; }
+@keyframes breathDot { 0%, 100% { transform: scale(0.6); opacity: 0.4; } 40%, 60% { transform: scale(1.4); opacity: 1; } }
+.breath-label { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: #39FF14; font-weight: bold; }
+
+/* ── HORMONAL CORTISOL WINDOWS ── */
+#cortisol { justify-content: flex-start; }
+.cortisol-header { margin-bottom: 20px; border-bottom: 1px dashed rgba(57,255,20,0.3); padding-bottom: 12px; }
+.cortisol-header h2 { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+.cortisol-header p { font-size: 11px; color: rgba(57, 255, 20, 0.6); margin-top: 4px; }
+.cortisol-countdown { font-size: 52px; font-weight: bold; letter-spacing: -2px; line-height: 1; margin-bottom: 4px; }
+.cortisol-countdown-label { font-size: 10px; color: rgba(57, 255, 20, 0.5); margin-bottom: 20px; text-transform: uppercase; }
+
+.window-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+.window-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid rgba(57, 255, 20, 0.15); background: transparent; }
+.window-item.active-window { background: rgba(57, 255, 20, 0.08); border-color: #39FF14; box-shadow: 0 0 8px rgba(57,255,20,0.1); }
+.window-item.past-window { opacity: 0.25; }
+.wi-time { font-size: 10px; color: rgba(57, 255, 20, 0.4); min-width: 40px; font-weight: bold; }
+.wi-dot { width: 6px; height: 6px; border: 1px solid rgba(57, 255, 20, 0.4); }
+.window-item.active-window .wi-dot { background: #39FF14; border-color: #39FF14; box-shadow: 0 0 6px #39FF14; }
+.wi-text { font-size: 12px; color: rgba(57, 255, 20, 0.7); text-transform: uppercase; }
+.window-item.active-window .wi-text { color: #39FF14; font-weight: bold; }
+
+.dlmo-card { border: 1px dashed rgba(57, 255, 20, 0.3); padding: 14px; margin-bottom: 20px; }
+.dlmo-label { font-size: 9px; color: rgba(57, 255, 20, 0.5); text-transform: uppercase; margin-bottom: 4px; }
+.dlmo-value { font-size: 16px; font-weight: bold; }
+.dlmo-sub { font-size: 11px; color: rgba(57, 255, 20, 0.4); margin-top: 4px; }
+
+/* ── METRICS LAB (DRIFT PLOT) ── */
+#metrics { justify-content: flex-start; }
+.metrics-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.metric-tile { border: 1px solid rgba(57, 255, 20, 0.2); padding: 12px; }
+.mt-label { font-size: 9px; color: rgba(57, 255, 20, 0.5); text-transform: uppercase; }
+.mt-value { font-size: 20px; font-weight: bold; margin-top: 2px; }
+.graph-container { width: 100%; border: 1px dashed rgba(57, 255, 20, 0.4); background: rgba(0,0,0,0.5); padding: 12px; margin-bottom: 20px; }
+.graph-title { font-size: 10px; color: rgba(57, 255, 20, 0.6); text-transform: uppercase; margin-bottom: 8px; }
+#drift-canvas { width: 100%; height: 100px; display: block; }
+.history-title { font-size: 11px; text-transform: uppercase; border-bottom: 1px solid rgba(57,255,20,0.2); padding-bottom: 4px; margin-bottom: 8px; }
+.history-list { display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto; }
+.history-item { display: flex; justify-content: space-between; font-size: 11px; color: rgba(57, 255, 20, 0.6); padding: 2px 0; }
+</style>
+</head>
+<body>
+
+<div id="meq" class="screen">
+  <div class="screen-inner">
+    <div class="meq-header">
+      <h1>CHRONO-CALIBRATION</h1>
+      <p>Configure physiological parameters to calculate neurological anchor windows.</p>
+    </div>
+    <div class="meq-progress"><div class="meq-prog-fill" id="meq-progress-bar"></div></div>
+    <div id="meq-question-container">
+      <div class="meq-q" id="meq-text">Loading question...</div>
+      <div class="meq-options" id="meq-options-container"></div>
+    </div>
+    <div class="meq-nav">
+      <button class="btn-ghost" id="meq-prev" style="display:none;">Back</button>
+    </div>
+  </div>
+</div>
+
+<div id="home" class="screen">
+  <div class="screen-inner">
+    <div class="home-top">
+      <span class="home-greeting" id="dashboard-type">SYS // ACTIVE</span>
+      <span class="home-time" id="top-time-display">00:00:00</span>
+    </div>
+    <div class="home-clock" id="clock-display">00:00</div>
+    <div class="home-date" id="date-display">LOADING_CHRONOS</div>
+
+    <div class="readiness-card">
+      <div class="rc-row">
+        <span class="rc-label">WAKE_VELOCITY</span>
+        <span class="rc-value" id="readiness-score">--%</span>
+      </div>
+      <div class="rc-bar"><div class="rc-bar-fill" id="readiness-bar"></div></div>
+      <span class="rc-sub" id="readiness-desc">Awaiting neural diagnostics data...</span>
+    </div>
+
+    <div class="streak-row" id="streak-container">
+      <div class="streak-day" data-day="0">M</div>
+      <div class="streak-day" data-day="1">T</div>
+      <div class="streak-day" data-day="2">W</div>
+      <div class="streak-day" data-day="3">T</div>
+      <div class="streak-day" data-day="4">F</div>
+      <div class="streak-day" data-day="5">S</div>
+      <div class="streak-day" data-day="6">S</div>
+    </div>
+
+    <div class="dur-pills">
+      <button class="dur-pill" data-dur="5">05M // LITE</button>
+      <button class="dur-pill active" data-dur="10">10M // MID</button>
+      <button class="dur-pill" data-dur="15">15M // HARDCORE</button>
+    </div>
+
+    <div class="sleep-row">
+      <span class="sleep-row-label">SLEEP QUANTITY TRUNCATION</span>
+      <div class="sleep-time-btns">
+        <button class="sleep-time-btn" data-hours="4">4H</button>
+        <button class="sleep-time-btn active" data-hours="6">6H</button>
+        <button class="sleep-time-btn" data-hours="8">8H</button>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="start-btn" style="margin-top:12px;">INITIATE WAKE CYCLE</button>
+    <button class="btn-ghost" id="view-metrics-btn" style="margin-top:10px;">HISTORICAL METRICS</button>
+  </div>
+</div>
+
+<div id="cold-prep" class="screen">
+  <div class="cold-inner">
+    <div class="cold-ring">
+      <svg class="cold-ring-svg" width="122" height="122">
+        <circle class="cold-track" cx="61" cy="61" r="59"></circle>
+        <circle class="cold-prog" cx="61" cy="61" r="59" stroke-dasharray="370" stroke-dashoffset="0" id="cold-svg-fill"></circle>
+      </svg>
+      <span class="cold-num" id="cold-countdown-num">30</span>
+    </div>
+    <div class="cold-title">THERMAL STIMULATION</div>
+    <div class="cold-sub">Splash freezing water on your face now. Rapid thermal drop triggers the mammalian dive reflex, immediately vasoconstricting and forcing oxygenated blood to the brain core.</div>
+    <button class="btn-primary" id="cold-done-btn">THERMAL LOCKED // START PHASES</button>
+    <button class="cold-skip" id="cold-skip-btn">BYPASS STIMULATION</button>
+  </div>
+</div>
+
+<div id="session" class="screen">
+  <div id="light-field"></div>
+  <div class="session-ui">
+    <div class="sess-top">
+      <div class="saccade-wrap">
+        <div class="saccade-track"><div class="saccade-ball"></div></div>
+        <span class="saccade-label">Track with Eyes // Force Saccadic Pacing</span>
+      </div>
+      <div class="sess-timer-small">
+        <span class="sess-time-num" id="sess-time">00:00</span>
+        <span class="sess-phase" id="sess-phase-lbl">STIMULATING</span>
+      </div>
+    </div>
+
+    <div class="game-arena">
+      <div class="game-score-row" id="game-stats">
+        <div class="gs-item"><span class="gs-val" id="game-hits">0</span><span class="gs-lbl">HITS</span></div>
+        <div class="gs-sep"></div>
+        <div class="gs-item"><span class="gs-val" id="game-combo">0</span><span class="gs-lbl">COMBO</span></div>
+        <div class="gs-sep"></div>
+        <div class="gs-item"><span class="gs-val" id="game-accuracy">100%</span><span class="gs-lbl">ACC</span></div>
+      </div>
+      <div class="target-zone" id="matrix-grid"></div>
+    </div>
+
+    <div class="breath-wrap" id="breath-node">
+      <div class="breath-arc"><div class="breath-dot"></div></div>
+      <span class="breath-label" id="breath-txt">INHALA EXPONENTIALLY</span>
+    </div>
+
+    <div class="session-controls">
+      <button class="sc-btn" id="sess-abort-btn">ABORT SYSTEM</button>
+      <button class="sc-btn" id="sess-mute-btn">KILL AUDIO</button>
+    </div>
+  </div>
+</div>
+
+<div id="cortisol" class="screen">
+  <div class="cortisol-inner">
+    <div class="cortisol-header">
+      <h2 id="cortisol-title">ANCHOR HORMONES</h2>
+      <p>Circadian oscillation models tracking critical cortisol awakening response targets.</p>
+    </div>
+    <div class="cortisol-countdown" id="cortisol-timer">00:00:00</div>
+    <div class="cortisol-countdown-label" id="cortisol-timer-label">COUNTDOWN TO CORTISOL PEAK</div>
+
+    <div class="window-list">
+      <div class="window-item" id="win-cortisol">
+        <div class="
