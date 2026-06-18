@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEURO-OS // CORE v5.0</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --terminal: #00ff66;
+            --terminal-dim: #008833;
+            --text: #e0e0e0;
+            --panel: #0d0d0d;
+            --border: #1a1a1a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            line-height: 1.4;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            border-bottom: 2px dashed var(--terminal-dim);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            color: var(--terminal);
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+        }
+
+        .meta {
+            color: var(--terminal-dim);
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .metric-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-left: 3px solid var(--terminal-dim);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--terminal-dim);
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            color: var(--text);
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .block {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            align-items: start;
+        }
+
+        .block.study {
+            border-left: 4px solid var(--terminal);
+        }
+
+        .block.physical {
+            border-left: 4px solid #00bcff;
+        }
+
+        .block.system {
+            border-left: 4px solid #888;
+            opacity: 0.7;
+        }
+
+        .time {
+            color: var(--terminal);
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .content h3 {
+            font-size: 1rem;
+            color: var(--text);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .content p {
+            font-size: 0.85rem;
+            color: #b0b0b0;
+        }
+
+        .chem-tag {
+            display: inline-block;
+            background: rgba(0, 255, 102, 0.1);
+            color: var(--terminal);
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            border: 1px solid var(--terminal-dim);
+            margin-top: 6px;
+            border-radius: 3px;
+        }
+
+        .protocol-tag {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.05);
+            color: #aaa;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            border: 1px solid #333;
+            margin-top: 6px;
+            margin-left: 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>NEURO-OS // TIMELINE_V5.0</h1>
+            <div class="meta">WAKE: 19.5H | SLEEP: 4.5H (3 CYCLES) | FOCUS TARGET: 16H</div>
+        </header>
+
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Study</div>
+                <div class="metric-value">16.0 Hours</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Gym Window</div>
+                <div class="metric-value">21:00 - 22:30</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Sleep Target</div>
+                <div class="metric-value">00:30 - 05:00</div>
+            </div>
+        </section>
+
+        <main class="timeline">
+            
+            <div class="block system">
+                <div class="time">05:00 - 05:30</div>
+                <div class="content">
+                    <h3>Hard Boot Sequence</h3>
+                    <p>Immediate bright light exposure. No screens. Rehydrate with 500mL water + salt pinch.</p>
+                    <span class="chem-tag">L-Tyrosine (2-3g)</span>
+                </div>
+            </div>
+
+            <div class="block study">
+                <div class="time">05:30 - 09:30</div>
+                <div class="content">
+                    <h3>Study Block I (4.0h)</h3>
+                    <p>Focus: Tajrobi Mathematics. 50-minute sprints + 2-minute panoramic vision resets.</p>
+                    <span class="chem-tag">06:30: Caffeine (High)</span>
+                </div>
+            </div>
+
+            <div class="block system">
+                <div class="time">09:30 - 09:45</div>
+                <div class="content">
+                    <h3>Kinetic Pivot</h3>
+                    <p>Physical movement/pacing. Zero screen inputs or content consumption.</p>
+                </div>
+            </div>
+
+            <div class="block study">
+                <div class="time">09:45 - 13:45</div>
+                <div class="content">
+                    <h3>Study Block II (4.0h)</h3>
+                    <p>Focus: Health and Hygiene. Direct active recall testing and memory maps.</p>
+                    <span class="chem-tag">11:00: Caffeine (Med)</span>
+                </div>
+            </div>
+
+            <div class="block system">
+                <div class="time">13:45 - 14:30</div>
+                <div class="content">
+                    <h3>Glucose Defense Refuel</h3>
+                    <p>High-protein, high-fat, ultra-low-carb meal. Avoid sugar spikes.</p>
+                    <span class="chem-tag">14:00: Caffeine (Final Cutoff)</span>
+                    <span class="chem-tag">14:15: Creatine (5g)</span>
+                </div>
+            </div>
+
+            <div class="block study">
+                <div class="time">14:30 - 18:30</div>
+                <div class="content">
+                    <h3>Study Block III (4.0h)</h3>
+                    <p>Focus: Practice exams, testing, or mixed file reviews.</p>
+                    <span class="protocol-tag">16:30: NSDR Reset (15 Mins)</span>
+                </div>
+            </div>
+
+            <div class="block system">
+                <div class="time">18:30 - 19:00</div>
+                <div class="content">
+                    <h3>Pre-Compute Gap</h3>
+                    <p>Clear environment. Mindset transition and hydration baseline check.</p>
+                </div>
+            </div>
+
+            <div class="block study">
+                <div class="time">19:00 - 21:00</div>
+                <div class="content">
+                    <h3>Study Block IV (2.0h)</h3>
+                    <p>Focus: Overdrive Velocity. Clean up open frameworks and queue tomorrow's layout.</p>
+                </div>
+            </div>
+
+            <div class="block physical">
+                <div class="time">21:00 - 22:30</div>
+                <div class="content">
+                    <h3>CNS Exertion [Locked]</h3>
+                    <p>Weightlifting / Running. Complete cognitive decoupling. Absolute physical output.</p>
+                </div>
+            </div>
+
+            <div class="block study">
+                <div class="time">22:30 - 00:30</div>
+                <div class="content">
+                    <h3>Study Block V (2.0h)</h3>
+                    <p>Focus: Final documentation, metrics logging, or frictionless file review.</p>
+                    <span class="protocol-tag">22:30: High-Carb Post-Workout Meal</span>
+                    <span class="protocol-tag">23:15: Hot Shower</span>
+                </div>
+            </div>
+
+            <div class="block system">
+                <div class="time">00:30 - 05:00</div>
+                <div class="content">
+                    <h3>System Offline</h3>
+                    <p>Complete darkness. Core memory synthesis. 4.5 hours uninterupted sleep.</p>
+                    <span class="protocol-tag">00:15: Screen Blackout</span>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+</body>
+  </html>
+  
