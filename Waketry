@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NEURO-WAKE // MATRIX ENGINE</title>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#020402; }
+
+body {
+  font-family: 'Courier New', Courier, monospace;
+  color: #39FF14;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── SCREEN LIFECYCLE ── */
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
+  overflow-y: auto; overflow-x: hidden;
+  background: #020402;
+}
+.screen.active { opacity:1; pointer-events:all; }
+
+/* ── MATRIX TERMINAL UI SYSTEM ── */
+.btn-primary {
+  width: 100%; padding: 18px; border-radius: 2px; border: 1px solid #39FF14;
+  background: rgba(57, 255, 20, 0.1); color: #39FF14; font-size: 14px; font-weight: 800;
+  font-family: 'Courier New', Courier, monospace; cursor: pointer;
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.15); text-transform: uppercase; letter-spacing: 2px;
+  transition: all 0.1s;
+}
+.btn-primary:active { background: #39FF14; color: #020402; box-shadow: 0 0 25px #39FF14; transform: scale(0.98); }
+
+.btn-ghost {
+  background: transparent; border: 1px dashed rgba(57, 255, 20, 0.4);
+  color: rgba(57, 255, 20, 0.8); border-radius: 2px;
+  padding: 14px; font-size: 12px; font-family: 'Courier New', Courier, monospace;
+  cursor: pointer; width: 100%; text-transform: uppercase; transition: all 0.1s;
+}
+.btn-ghost:active { background: rgba(57, 255, 20, 0.2); color: #39FF14; }
+
+.screen-inner {
+  width: 100%; max-width: 400px;
+  display: flex; flex-direction: column;
+  padding: 40px 24px; min-height: 100%;
+}
+
+/* ── MEQ PROFILE BUILDER ── */
+#meq { justify-content: flex-start; }
+.meq-header { margin-bottom: 24px; border-bottom: 1px solid #39FF14; padding-bottom: 16px; }
+.meq-header h1 { font-size: 24px; font-weight: 800; letter-spacing: -1px; text-transform: uppercase; text-shadow: 0 0 8px rgba(57, 255, 20, 0.4); }
+.meq-header p { font-size: 11px; color: rgba(57, 255, 20, 0.7); margin-top: 8px; line-height: 1.5; text-transform: uppercase; }
+.meq-progress { width: 100%; height: 2px; background: rgba(57, 255, 20, 0.2); margin-bottom: 24px; }
+.meq-prog-fill { height: 100%; background: #39FF14; width: 0%; box-shadow: 0 0 10px #39FF14; transition: width 0.3s; }
+.meq-q { font-size: 14px; font-weight: bold; line-height: 1.4; margin-bottom: 24px; text-transform: uppercase; }
+.meq-options { display: flex; flex-direction: column; gap: 10px; }
+.meq-opt {
+  padding: 16px; border: 1px solid rgba(57, 255, 20, 0.3);
+  background: transparent; color: rgba(57, 255, 20, 0.9); font-size: 12px;
+  font-family: 'Courier New', Courier, monospace; cursor: pointer; text-align: left;
+  transition: background 0.1s;
+}
+.meq-opt.selected { border-color: #39FF14; background: rgba(57, 255, 20, 0.2); color: #39FF14; box-shadow: inset 0 0 10px rgba(57, 255, 20, 0.2); }
+.meq-nav { display: flex; gap: 10px; margin-top: auto; padding-top: 24px; }
+
+/* ── CORE DASHBOARD ── */
+#home { justify-content: flex-start; }
+.home-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; border-bottom: 1px dashed rgba(57, 255, 20, 0.3); padding-bottom: 8px; }
+.home-greeting { font-size: 10px; color: #39FF14; text-transform: uppercase; font-weight: bold; }
+.home-time { font-size: 10px; font-weight: bold; }
+.home-clock { font-size: 64px; font-weight: 800; letter-spacing: -4px; line-height: 1; margin-bottom: 4px; text-shadow: 0 0 15px rgba(57, 255, 20, 0.4); }
+.home-date { font-size: 12px; color: rgba(57, 255, 20, 0.6); margin-bottom: 32px; text-transform: uppercase; letter-spacing: 1px; }
+
+.readiness-card {
+  border: 1px solid rgba(57, 255, 20, 0.4); background: rgba(0, 0, 0, 0.5);
+  padding: 16px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.05);
+}
+.rc-row { display: flex; align-items: center; justify-content: space-between; }
+.rc-label { font-size: 10px; color: rgba(57, 255, 20, 0.7); letter-spacing: 1px; }
+.rc-value { font-size: 24px; font-weight: bold; color: #39FF14; text-shadow: 0 0 8px rgba(57, 255, 20, 0.5); }
+.rc-sub { font-size: 10px; color: rgba(57, 255, 20, 0.5); text-transform: uppercase; }
+.rc-bar { width: 100%; height: 2px; background: rgba(57, 255, 20, 0.2); }
+.rc-bar-fill { height: 100%; background: #39FF14; box-shadow: 0 0 8px #39FF14; transition: width 0.5s ease; }
+
+.streak-row { display: flex; align-items: center; gap: 8px; margin-bottom: 32px; justify-content: space-between; }
+.streak-day {
+  width: 36px; height: 36px; border: 1px solid rgba(57, 255, 20, 0.3); background: transparent;
+  display: flex; align-items: center; justify-content: center; font-size: 12px; color: rgba(57, 255, 20, 0.5);
+}
+.streak-day.done { border-color: rgba(57, 255, 20, 0.8); background: rgba(57, 255, 20, 0.15); color: #39FF14; }
+.streak-day.today-done { border-color: #39FF14; background: #39FF14; color: #000; font-weight: bold; box-shadow: 0 0 12px #39FF14; }
+
+.sleep-row { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; border-top: 1px solid rgba(57, 255, 20, 0.2); margin-bottom: 24px; }
+.sleep-row-label { font-size: 10px; color: #39FF14; text-transform: uppercase; letter-spacing: 1px; }
+.sleep-time-btns { display: flex; gap: 8px; }
+.sleep-time-btn {
+  flex: 1; background: transparent; border: 1px dashed rgba(57, 255, 20, 0.4); color: rgba(57, 255, 20, 0.6);
+  font-family: 'Courier New', Courier, monospace; font-size: 12px; padding: 12px 0; cursor: pointer; font-weight: bold;
+}
+.sleep-time-btn.active { border-style: solid; border-color: #39FF14; background: rgba(57, 255, 20, 0.2); color: #39FF14; box-shadow: inset 0 0 10px rgba(57, 255, 20, 0.2); }
+
+/* ── PRE-WAKE COLD RUN-UP ── */
+#cold-prep { justify-content: center; }
+.cold-inner { width: 100%; max-width: 390px; padding: 0 24px; display: flex; flex-direction: column; align-items: center; }
+.cold-ring { width: 160px; height: 160px; border: 1px solid rgba(57, 255, 20, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; position: relative; box-shadow: 0 0 30px rgba(57, 255, 20, 0.05); }
+.cold-ring-svg { position: absolute; inset: -2px; transform: rotate(-90deg); }
+.cold-track { fill:none; stroke: rgba(57, 255, 20, 0.1); stroke-width: 2; }
+.cold-prog { fill:none; stroke: #39FF14; stroke-width: 3; transition: stroke-dashoffset 1s linear; filter: drop-shadow(0 0 6px #39FF14); }
+.cold-num { font-size: 56px; font-weight: 800; text-shadow: 0 0 15px rgba(57, 255, 20, 0.5); }
+.cold-title { font-size: 20px; font-weight: 800; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+.cold-sub { font-size: 12px; color: rgba(57, 255, 20, 0.7); text-align: center; line-height: 1.6; margin-bottom: 40px; text-transform: uppercase; }
+
+/* ── PHASES OF HIGH-INTENSITY WAKING ── */
+#session { background: #000; justify-content: center; position: relative; }
+#light-field { position: absolute; inset: 0; background: #000; z-index: 1; pointer-events: none; transition: background 0.1s; }
+.session-ui { position: relative; z-index: 5; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 24px; }
+.sess-top { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+.saccade-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; background: rgba(0,0,0,0.8); padding: 12px; border: 1px solid rgba(57,255,20,0.3); box-shadow: 0 0 15px rgba(0,0,0,0.9); }
+.saccade-track { width: 100%; height: 2px; background: rgba(57, 255, 20, 0.2); position: relative; }
+.saccade-ball { width: 12px; height: 12px; background: #39FF14; position: absolute; top: -5px; left: 0; animation: saccadeMove 1s cubic-bezier(0.25, 0.1, 0.25, 1) infinite alternate; box-shadow: 0 0 10px #39FF14; border-radius: 50%; }
+@keyframes saccadeMove { 0% { left: 0; } 100% { left: calc(100% - 12px); } }
+.saccade-label { font-size: 9px; letter-spacing: 2px; color: #39FF14; text-transform: uppercase; font-weight: bold; }
+
+.sess-timer-small { display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(0,0,0,0.8); padding: 12px 24px; border: 1px solid #39FF14; box-shadow: inset 0 0 15px rgba(57,255,20,0.1); }
+.sess-time-num { font-size: 48px; font-weight: 800; color: #39FF14; text-shadow: 0 0 10px #39FF14; line-height: 1; }
+.sess-phase { font-size: 10px; letter-spacing: 2px; color: rgba(57, 255, 20, 0.8); text-transform: uppercase; font-weight: bold; }
+
+/* NEURO-REFLEX COGNITIVE MATRIX GRID */
+.game-arena { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative; margin: 20px 0; }
+.game-score-row { display: flex; align-items: center; justify-content: space-between; width: 100%; background: rgba(0,0,0,0.85); padding: 12px 20px; border: 1px solid rgba(57,255,20,0.3); opacity: 0; transition: opacity 0.3s; }
+.game-score-row.show { opacity: 1; }
+.gs-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.gs-val { font-size: 20px; font-weight: 800; color: #39FF14; }
+.gs-lbl { font-size: 9px; color: rgba(57, 255, 20, 0.6); text-transform: uppercase; letter-spacing: 1px; }
+
+.target-zone { width: 100%; height: 220px; position: relative; border: 1px dashed rgba(57, 255, 20, 0.3); background: rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.5s; overflow: hidden; }
+.target-zone.show { opacity: 1; }
+
+.target-dot { position: absolute; width: 44px; height: 44px; border: 2px solid #39FF14; background: rgba(57,255,20,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 15px rgba(57, 255, 20, 0.4); transform: translate(-50%, -50%); transition: transform 0.05s; }
+.target-dot:active { transform: translate(-50%, -50%) scale(0.9); }
+.target-dot::before { content: '><'; font-size: 10px; color: #39FF14; font-weight: bold; }
+
+.ripple { position: absolute; border: 2px solid #39FF14; border-radius: 50%; animation: rippleOut 0.4s ease-out forwards; pointer-events: none; transform: translate(-50%, -50%); }
+@keyframes rippleOut { from { width: 44px; height: 44px; opacity: 1; } to { width: 120px; height: 120px; opacity: 0; } }
+.miss-flash { position: absolute; inset: 0; background: rgba(255, 0, 0, 0.3); animation: missFlash 0.2s ease-out forwards; pointer-events: none; }
+@keyframes missFlash { from { opacity:1; } to { opacity:0; } }
+
+/* SYNCED BREATH ENGINE */
+.breath-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0; transition: opacity 0.5s; background: rgba(0,0,0,0.9); padding: 16px; border: 1px solid #39FF14; }
+.breath-wrap.show { opacity: 1; }
+.breath-arc { width: 50px; height: 50px; border: 2px solid rgba(57, 255, 20, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: breathArc 6s ease-in-out infinite; }
+@keyframes breathArc { 0%, 100% { transform: scale(0.8); border-color: rgba(57,255,20,0.3); } 40%, 60% { transform: scale(1.4); border-color: #39FF14; box-shadow: 0 0 15px #39FF14; } }
+.breath-dot { width: 10px; height: 10px; background: #39FF14; border-radius: 50%; animation: breathDot 6s ease-in-out infinite; }
+@keyframes breathDot { 0%, 100% { transform: scale(0.5); opacity: 0.3; } 40%, 60% { transform: scale(1.5); opacity: 1; box-shadow: 0 0 10px #39FF14; } }
+.breath-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #39FF14; font-weight: bold; }
+
+/* ── METRICS / DRIFT PLOT ── */
+#metrics { justify-content: flex-start; }
+.metrics-grid { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; width: 100%; }
+.metric-tile { border: 1px solid rgba(57, 255, 20, 0.3); padding: 16px; background: rgba(0,0,0,0.5); }
+.mt-label { font-size: 10px; color: rgba(57, 255, 20, 0.7); text-transform: uppercase; letter-spacing: 1px; }
+.mt-value { font-size: 28px; font-weight: 800; color: #39FF14; margin-top: 4px; text-shadow: 0 0 8px rgba(57, 255, 20, 0.3); }
+.graph-container { width: 100%; border: 1px solid rgba(57, 255, 20, 0.3); background: rgba(0,0,0,0.8); padding: 16px; margin-bottom: 24px; }
+.graph-title { font-size: 10px; color: #39FF14; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px; font-weight: bold; }
+#drift-canvas { width: 100%; height: 120px; display: block; }
+</style>
+</head>
+<body>
+
+<div id="meq" class="screen active">
+  <div class="screen-inner">
+    <div class="meq-header">
+      <h1>SYS_INIT</h1>
+      <p>Configure physiological anchors.</p>
+    </div>
+    <div class="meq-progress"><div class="meq-prog-fill" id="meq-progress-bar"></div></div>
+    <div id="meq-question-container">
+      <div class="meq-q" id="meq-text">Loading diagnostic...</div>
+      <div class="meq-options" id="meq-options-container"></div>
+    </div>
+    <div class="meq-nav">
+      <button class="btn-ghost" id="meq-prev" style="display:none;">← PREV</button>
+    </div>
+  </div>
+</div>
+
+<div id="home" class="screen">
+  <div class="screen-inner">
+    <div class="home-top">
+      <span class="home-greeting" id="dashboard-type">STATUS // ONLINE</span>
+      <span class="home-time" id="top-time-display">00:00:00</span>
+    </div>
+    <div class="home-clock" id="clock-display">00:00</div>
+    <div class="home-date" id="date-display">...</div>
+
+    <div class="readiness-card">
+      <div class="rc-row">
+        <span class="rc-label">WAKE VELOCITY</span>
+        <span class="rc-value" id="readiness-score">--%</span>
+      </div>
+      <div class="rc-bar"><div class="rc-bar-fill" id="readiness-bar" style="width:0%"></div></div>
+      <span class="rc-sub" id="readiness-desc">Analyzing constraints...</span>
+    </div>
+
+    <div class="streak-row" id="streak-container">
+      <div class="streak-day" data-day="0">M</div>
+      <div class="streak-day" data-day="1">T</div>
+      <div class="streak-day" data-day="2">W</div>
+      <div class="streak-day" data-day="3">T</div>
+      <div class="streak-day" data-day="4">F</div>
+      <div class="streak-day" data-day="5">S</div>
+      <div class="streak-day" data-day="6">S</div>
+    </div>
+
+    <div class="sleep-row">
+      <span class="sleep-row-label">SLEEP QUANTITY (HOURS)</span>
+      <div class="sleep-time-btns">
+        <button class="sleep-time-btn active" data-hours="4">4H</button>
+        <button class="sleep-time-btn" data-hours="5">5H</button>
+        <button class="sleep-time-btn" data-hours="6">6H</button>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="start-btn" style="margin-top:auto;">INITIATE OVERRIDE</button>
+    <button class="btn-ghost" id="view-metrics-btn" style="margin-top:12px;">SYSTEM METRICS</button>
+  </div>
+</div>
+
+<div id="cold-prep" class="screen">
+  <div class="cold-inner">
+    <div class="cold-ring">
+      <svg class="cold-ring-svg" width="160" height="160">
+        <circle class="cold-track" cx="80" cy="80" r="78"></circle>
+        <circle class="cold-prog" cx="80" cy="80" r="78" stroke-dasharray="490" stroke-dashoffset="0" id="cold-svg-fill"></circle>
+      </svg>
+      <span class="cold-num" id="cold-countdown-num">30</span>
+    </div>
+    <div class="cold-title">THERMAL SHOCK</div>
+    <div class="cold-sub">Splash freezing water on face/wrists. Triggers mammalian dive reflex for instant PFC perfusion.</div>
+    <button class="btn-primary" id="cold-done-btn">THERMAL LOCKED // START</button>
+    <button class="btn-ghost" id="cold-skip-btn" style="margin-top:16px;">BYPASS</button>
+  </div>
+</div>
+
+<div id="session" class="screen">
+  <div id="light-field"></div>
+  <div class="session-ui">
+    <div class="sess-top">
+      <div class="saccade-wrap">
+        <div class="saccade-track"><div class="saccade-ball"></div></div>
+        <span class="saccade-label">Track Node // Force Saccades</span>
+      </div>
+      <div class="sess-timer-small">
+        <span class="sess-time-num" id="sess-time">05:00</span>
+        <span class="sess-phase" id="sess-phase-lbl">PHASE I</span>
+      </div>
+    </div>
+
+    <div class="game-arena">
+      <div class="game-score-row" id="game-stats">
+        <div class="gs-item"><span class="gs-val" id="game-hits">0</span><span class="gs-lbl">HITS</span></div>
+        <div class="gs-item"><span class="gs-val" id="game-combo">0</span><span class="gs-lbl">CHAIN</span></div>
+        <div class="gs-item"><span class="gs-val" id="game-accuracy">100%</span><span class="gs-lbl">ACC</span></div>
+      </div>
+      <div class="target-zone" id="matrix-grid"></div>
+    </div>
+
+    <div class="breath-wrap" id="breath-node">
+      <div class="breath-arc"><div class="breath-dot"></div></div>
+      <span class="breath-label" id="breath-txt">INHALA MAXIMA</span>
+    </div>
+
+    <div style="display:flex; gap:12px; width:100%; margin-top:auto;">
+      <button class="btn-ghost" id="sess-abort-btn">ABORT</button>
+      <button class="btn-ghost" id="sess-mute-btn">MUTE AUDIO</button>
+    </div>
+  </div>
+</div>
+
+<div id="metrics" class="screen">
+  <div class="screen-inner">
+    <div class="meq-header" style="margin-bottom:32px;">
+      <h2>SYSTEM METRICS</h2>
+      <p>Cognitive velocity & drift analytics.</p>
+    </div>
+    
+    <div class="metrics-grid">
+      <div class="metric-tile">
+        <div class="mt-label">ACTIVE STREAK</div>
+        <div class="mt-value" id="m-streak">0 DAYS</div>
+      </div>
+      <div class="metric-tile">
+        <div class="mt-label">MEAN ACCURACY</div>
+        <div class="mt-value" id="m-avg-acc">--%</div>
+      </div>
+    </div>
+    
+    <div class="graph-container">
+      <div class="graph-title">COGNITIVE DRIFT (LAST 14)</div>
+      <canvas id="drift-canvas"></canvas>
+    </div>
+    
+    <button class="btn-primary" id="metrics-back-btn" style="margin-top:auto;">RETURN TO SYSTEM</button>
+  </div>
+</div>
+
+<script>
+/* ── STATE ARCHITECTURE ── */
+const MEQ_QUESTIONS = [
+  { q: "IDENTIFY IDEAL WAKE TARGET IF NO EXTERNAL CONSTRAINTS EXIST:", o: ["04:00 - 05:30", "05:30 - 07:00", "07:00 - 09:00", "POST 09:00"], s: [4,3,2,1] },
+  { q: "COGNITIVE STATE 30 MIN POST-WAKE:", o: ["FOGGY/CRITICAL", "SLUGGISH", "FUNCTIONAL", "ALPHA/ALERT"], s: [1,2,3,4] },
+  { q: "PEAK PERFORMANCE WINDOW:", o: ["MORNING (05-10)", "MIDDAY (10-16)", "EVENING (16-22)", "NIGHT (22-04)"], s: [4,3,2,1] }
+];
+
+let state = {
+  meqScore: null,
+  meqAnswers: [],
+  currentMeqIdx: 0,
+  sleepHours: 4,
+  sessions: [],
+  currentScreen: 'meq'
+};
+
+const STORAGE_KEY = 'neuro_wake_engine_data_v3';
+
+function loadState() {
+  try {
+    const local = localStorage.getItem(STORAGE_KEY);
+    if (local) state = { ...state, ...JSON.parse(local) };
+  } catch(e) {}
+}
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function switchScreen(id) {
+  state.currentScreen = id;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'home') renderDashboard();
+  if (id === 'metrics') drawDriftGraph();
+}
+
+/* ── 1. INIT MEQ ── */
+function initSystem() {
+  loadState();
+  if (state.meqScore === null) {
+    switchScreen('meq');
+    renderMeqQuestion();
+  } else {
+    switchScreen('home');
+  }
+}
+
+function renderMeqQuestion() {
+  const qData = MEQ_QUESTIONS[state.currentMeqIdx];
+  document.getElementById('meq-progress-bar').style.width = `${((state.currentMeqIdx) / MEQ_QUESTIONS.length) * 100}%`;
+  document.getElementById('meq-text').innerText = `[NODE ${state.currentMeqIdx + 1}] ${qData.q}`;
+  
+  const optContainer = document.getElementById('meq-options-container');
+  optContainer.innerHTML = '';
+  
+  qDa    qData.o.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'meq-opt';
+      btn.innerText = opt;
+      btn.onclick = () => {
+        state.meqAnswers[state.currentMeqIdx] = idx;
+        if (state.currentMeqIdx < MEQ_QUESTIONS.length - 1) {
+          state.currentMeqIdx++;
+          renderMeqQuestion();
+        } else {
+          state.meqScore = state.meqAnswers.reduce((sum, val, i) => sum + MEQ_QUESTIONS[i].s[val], 0);
+          saveState();
+          switchScreen('home');
+        }
+      };
+      optContainer.appendChild(btn);
+    });
+    document.getElementById('meq-prev').style.display = state.currentMeqIdx > 0 ? 'block' : 'none';
+  }
+
+  document.getElementById('meq-prev').onclick = () => {
+    if (state.currentMeqIdx > 0) { state.currentMeqIdx--; renderMeqQuestion(); }
+  };
+
+  /* ── 2. DASHBOARD ── */
+  function renderDashboard() {
+    let baseVelocity = 35; 
+    if (state.sleepHours === 4) baseVelocity = 15; 
+    else if (state.sleepHours === 5) baseVelocity = 25;
+    else if (state.sleepHours === 6) baseVelocity = 40;
+
+    if (state.sessions.length > 0) {
+      const lastAcc = state.sessions[state.sessions.length - 1].acc;
+      baseVelocity += (lastAcc - 50) * 0.3; 
+    }
+    
+    baseVelocity = Math.max(5, Math.min(100, Math.round(baseVelocity)));
+    document.getElementById('readiness-score').innerText = `${baseVelocity}%`;
+    document.getElementById('readiness-bar').style.width = `${baseVelocity}%`;
+    
+    document.getElementById('readiness-desc').innerText = 
+      baseVelocity < 30 ? "CRITICAL SLEEP DEBT. OVERRIDE REQUIRED." : "SYSTEM STABLE. MAINTAIN DISCIPLINE.";
+
+    document.querySelectorAll('.sleep-time-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.getAttribute('data-hours')) === state.sleepHours);
+      b.onclick = () => {
+        state.sleepHours = parseInt(b.getAttribute('data-hours'));
+        saveState();
+        renderDashboard();
+      };
+    });
+
+    renderStreaks();
+  }
+
+  function renderStreaks() {
+    const container = document.getElementById('streak-container');
+    const days = container.querySelectorAll('.streak-day');
+    days.forEach(d => d.className = 'streak-day');
+    
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
+    state.sessions.forEach(s => {
+      const sDate = new Date(s.date);
+      sDate.setHours(0,0,0,0);
+      const diffDays = Math.floor((today - sDate) / (1000 * 60 * 60 * 24));
+      
+      if (diffDays >= 0 && diffDays < 7) {
+        const dayIdx = (sDate.getDay() + 6) % 7;
+        const el = container.querySelector(`[data-day="${dayIdx}"]`);
+        if (el) el.classList.add(diffDays === 0 ? 'today-done' : 'done');
+      }
+    });
+  }
+
+  setInterval(() => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('top-time-display').innerText = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    document.getElementById('clock-display').innerText = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }, 1000);
+
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const d = new Date();
+  document.getElementById('date-display').innerText = `${d.getDate()} // ${months[d.getMonth()]} // ${d.getFullYear()}`;
+
+  /* ── 3. AUDIO ENGINE & WAKE LOCK ── */
+  let audioCtx = null;
+  let isMuted = false;
+  let wakeLock = null;
+
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (err) {}
+  }
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function fireStressPulse(intensity = 1) {
+    if (isMuted || !audioCtx) return;
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(1000 + Math.random() * 800, audioCtx.currentTime);
+      
+      const volume = Math.min(0.15 * intensity, 1.0);
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    } catch(e) {}
+  }
+
+  /* ── 4. COLD PREP TIMEOUT ── */
+  let coldTimer = null;
+  let coldSec = 30;
+
+  document.getElementById('start-btn').onclick = () => {
+    initAudio();
+    requestWakeLock();
+    switchScreen('cold-prep');
+    startColdRun();
+  };
+
+  function startColdRun() {
+    coldSec = 30;
+    document.getElementById('cold-countdown-num').innerText = coldSec;
+    const fill = document.getElementById('cold-svg-fill');
+    fill.style.strokeDashoffset = 0;
+    
+    if(coldTimer) clearInterval(coldTimer);
+    coldTimer = setInterval(() => {
+      coldSec--;
+      document.getElementById('cold-countdown-num').innerText = coldSec;
+      fill.style.strokeDashoffset = (490 * (30 - coldSec)) / 30;
+      
+      if (coldSec <= 0) { clearInterval(coldTimer); beginWakePhase(); }
+    }, 1000);
+  }
+
+  document.getElementById('cold-done-btn').onclick = () => { clearInterval(coldTimer); beginWakePhase(); };
+  document.getElementById('cold-skip-btn').onclick = () => { clearInterval(coldTimer); beginWakePhase(); };
+
+  /* ── 5. WAKE ENGINE (PHOTONIC & COGNITIVE) ── */
+  let sessTimer = null;
+  let sessRemain = 300; 
+  let flashInterval = null;
+  let gameActive = false;
+  let gameHits = 0, gameTotal = 0, gameCombo = 0;
+  let nodeTimeout = null;
+  let strobeDisabled = false;
+
+  function beginWakePhase() {
+    switchScreen('session');
+    sessRemain = 300; 
+    gameHits = 0; gameTotal = 0; gameCombo = 0;
+    updateGameStats();
+    
+    if (sessTimer) clearInterval(sessTimer);
+    sessTimer = setInterval(() => {
+      sessRemain--;
+      runPhaseLogic();
+      if (sessRemain <= 0) terminateSession(true);
+    }, 1000);
+    
+    runPhaseLogic();
+  }
+
+  function runPhaseLogic() {
+    const min = Math.floor(sessRemain / 60);
+    const sec = sessRemain % 60;
+    document.getElementById('sess-time').innerText = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    
+    const elapsed = 300 - sessRemain;
+    const phaseLbl = document.getElementById('sess-phase-lbl');
+    const lightField = document.getElementById('light-field');
+    const gameUI = document.getElementById('game-stats');
+    const matrixGrid = document.getElementById('matrix-grid');
+    const breathUI = document.getElementById('breath-node');
+
+    if (flashInterval) { clearInterval(flashInterval); flashInterval = null; }
+
+    if (elapsed < 60) {
+      phaseLbl.innerText = "PHOTONIC OVERDRIVE";
+      gameUI.classList.remove('show');
+      matrixGrid.classList.remove('show');
+      breathUI.classList.remove('show');
+      gameActive = false;
+      
+      let isCyan = false;
+      flashInterval = setInterval(() => {
+        if (!strobeDisabled) lightField.style.backgroundColor = isCyan ? '#00FFFF' : '#FFFFFF';
+        isCyan = !isCyan;
+        if(elapsed % 2 === 0 && !isCyan) fireStressPulse(1 + (elapsed/20)); 
+      }, 70); 
+
+    } else if (elapsed < 240) {
+      phaseLbl.innerText = "COGNITIVE LOAD";
+      lightField.style.backgroundColor = '#000000';
+      gameUI.classList.add('show');
+      matrixGrid.classList.add('show');
+      breathUI.classList.remove('show');
+      
+      if (!gameActive) {
+        gameActive = true;
+        spawnNode();
+      }
+      if (elapsed % 3 === 0) fireStressPulse(2);
+
+    } else {
+      phaseLbl.innerText = "ADRENERGIC SURGE";
+      lightField.style.backgroundColor = '#020402';
+      gameUI.classList
+.remove('show');
+      matrixGrid.classList.remove('show');
+      gameActive = false;
+      if(nodeTimeout) clearTimeout(nodeTimeout);
+      
+      breathUI.classList.add('show');
+      const breathCycle = (elapsed - 240) % 6;
+      if (breathCycle < 2) document.getElementById('breath-txt').innerText = "INHALA MAXIMA";
+      else if (breathCycle < 4) document.getElementById('breath-txt').innerText = "HOLD HYPER-OXIC";
+      else document.getElementById('breath-txt').innerText = "EXHALA FORCE";
+    }
+  }
+
+  /* ── 6. COGNITIVE GAME ── */
+  function spawnNode() {
+    if (!gameActive) return;
+    const grid = document.getElementById('matrix-grid');
+    grid.innerHTML = '';
+    if (nodeTimeout) clearTimeout(nodeTimeout);
+
+    const dot = document.createElement('div');
+    dot.className = 'target-dot';
+    
+    const maxX = grid.clientWidth - 50;
+    const maxY = grid.clientHeight - 50;
+    const x = 25 + Math.random() * maxX;
+    const y = 25 + Math.random() * maxY;
+    
+    dot.style.left = `${x}px`;
+    dot.style.top = `${y}px`;
+    
+    let clicked = false;
+    dot.onclick = (e) => {
+      e.stopPropagation();
+      clicked = true;
+      gameHits++; gameTotal++; gameCombo++;
+      updateGameStats();
+      
+      const rip = document.createElement('div');
+      rip.className = 'ripple';
+      rip.style.left = `${x}px`; rip.style.top = `${y}px`;
+      grid.appendChild(rip);
+      
+      if (audioCtx && !isMuted) {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.frequency.setValueAtTime(1000 + (gameCombo*40), audioCtx.currentTime);
+        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 0.1);
+      }
+      
+      setTimeout(spawnNode, 50);
+    };
+    
+    grid.appendChild(dot);
+    
+    const speed = Math.max(500, 1200 - (gameCombo * 50));
+    
+    nodeTimeout = setTimeout(() => {
+      if (!clicked) {
+        gameTotal++; gameCombo = 0;
+        updateGameStats();
+        const flash = document.createElement('div');
+        flash.className = 'miss-flash';
+        grid.appendChild(flash);
+        if (navigator.vibrate) navigator.vibrate(100);
+        setTimeout(spawnNode, 150);
+      }
+    }, speed);
+  }
+
+  let gridClick = document.getElementById('matrix-grid');
+  gridClick.onclick = () => {
+    if (!gameActive) return;
+    gameTotal++; gameCombo = 0; updateGameStats();
+    const flash = document.createElement('div');
+    flash.className = 'miss-flash';
+    gridClick.appendChild(flash);
+    if (navigator.vibrate) navigator.vibrate(100);
+  };
+
+  function updateGameStats() {
+    document.getElementById('game-hits').innerText = gameHits;
+    document.getElementById('game-combo').innerText = gameCombo;
+    const acc = gameTotal > 0 ? Math.round((gameHits/gameTotal)*100) : 100;
+    document.getElementById('game-accuracy').innerText = `${acc}%`;
+  }
+
+  document.getElementById('sess-abort-btn').onclick = () => terminateSession(false);
+  document.getElementById('sess-mute-btn').onclick = () => {
+    isMuted = !isMuted;
+    document.getElementById('sess-mute-btn').innerText = isMuted ? "UNMUTE AUDIO" : "MUTE AUDIO";
+  };
+
+  function terminateSession(success) {
+    if (sessTimer) clearInterval(sessTimer);
+    if (flashInterval) clearInterval(flashInterval);
+    if (nodeTimeout) clearTimeout(nodeTimeout);
+    document.getElementById('light-field').style.backgroundColor = '#000';
+    
+    if (wakeLock) {
+      wakeLock.release().then(() => wakeLock = null);
+    }
+
+    if (success) {
+      const acc = gameTotal > 0 ? Math.round((gameHits/gameTotal)*100) : 100;
+      state.sessions.push({ date: new Date().toISOString(), acc: acc });
+      saveState();
+    }
+    switchScreen('home');
+  }
+
+  /* ── 7. METRICS / CANVAS ── */
+  document.getElementById('view-metrics-btn').onclick = () => switchScreen('metrics');
+  document.getElementById('metrics-back-btn').onclick = () => switchScreen('home');
+
+  function drawDriftGraph() {
+    document.getElementById('m-streak').innerText = `${state.sessions.length} NODES`;
+    const accs = state.sessions.slice(-14).map(s => s.acc);
+    
+    if (accs.length === 0) {
+      document.getElementById('m-avg-acc').innerText = "--%";
+      return;
+    }
+    
+    document.getElementById('m-avg-acc').innerText = `${Math.round(accs.reduce((a,b)=>a+b,0)/accs.length)}%`;
+    
+    const canvas = document.getElementById('drift-canvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const w = rect.width; const h = rect.height;
+    ctx.clearRect(0,0,w,h);
+    
+    if (accs.length < 2) return;
+    
+    ctx.strokeStyle = '#39FF14';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    accs.forEach((acc, i) => {
+      const x = (i / (accs.length - 1)) * (w - 20) + 10;
+      const y = h - (acc / 100) * (h - 20) - 10;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    
+    accs.forEach((acc, i) => {
+      const x = (i / (accs.length - 1)) * (w - 20) + 10;
+      const y = h - (acc / 100) * (h - 20) - 10;
+      ctx.fillStyle = '#020402'; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+  }
+
+  initSystem();
+</script>
+</body>
+</html>
