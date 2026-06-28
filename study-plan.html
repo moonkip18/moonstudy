@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Plan</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0e0e0e;
+    color: #ccc;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+  }
+
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 14px 14px 10px;
+    border-bottom: 1px solid #1e1e1e;
+  }
+
+  .exam-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #161616;
+    border: 1px solid #272727;
+    border-radius: 4px;
+    padding: 4px 9px;
+    cursor: default;
+  }
+
+  .exam-pill .name {
+    color: #888;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  .exam-pill .days {
+    font-size: 12px;
+    font-weight: bold;
+    color: #e8e8e8;
+  }
+
+  .exam-pill.urgent .days { color: #e05a5a; }
+  .exam-pill.soon .days   { color: #e09a5a; }
+  .exam-pill.ok .days     { color: #8fbc6a; }
+
+  .days-container {
+    padding: 10px 14px 60px;
+  }
+
+  .day-block {
+    margin-bottom: 4px;
+    border: 1px solid #1c1c1c;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .day-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: #131313;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+  }
+
+  .day-header:hover { background: #181818; }
+
+  .day-header.open { border-bottom-color: #1e1e1e; }
+
+  .day-label {
+    font-size: 11px;
+    color: #555;
+    min-width: 70px;
+  }
+
+  .day-tasks-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    flex: 1;
+  }
+
+  .task-chip {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #1a1a1a;
+    color: #999;
+    border: 1px solid #262626;
+    white-space: nowrap;
+  }
+
+  .task-chip.done {
+    color: #3a3a3a;
+    border-color: #1e1e1e;
+    text-decoration: line-through;
+  }
+
+  .progress-bar-wrap {
+    width: 44px;
+    height: 4px;
+    background: #1e1e1e;
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: #4a7c4e;
+    border-radius: 2px;
+    transition: width 0.2s;
+  }
+
+  .day-detail {
+    display: none;
+    padding: 8px 10px;
+    background: #0e0e0e;
+  }
+
+  .day-detail.open { display: block; }
+
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #141414;
+    cursor: pointer;
+  }
+
+  .task-row:last-child { border-bottom: none; }
+
+  .task-row:hover { background: #121212; }
+
+  .task-check {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #333;
+    border-radius: 2px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .task-check.checked {
+    background: #3d5e3f;
+    border-color: #4a7c4e;
+  }
+
+  .task-check.checked::after {
+    content: '✓';
+    font-size: 9px;
+    color: #8fbc6a;
+  }
+
+  .task-subject {
+    min-width: 70px;
+    font-size: 12px;
+    color: #777;
+    transition: color 0.15s;
+  }
+
+  .task-row.done .task-subject {
+    color: #333;
+    text-decoration: line-through;
+  }
+
+  .task-desc {
+    flex: 1;
+    font-size: 11px;
+    color: #555;
+    transition: color 0.15s;
+  }
+
+  .task-row.done .task-desc { color: #2a2a2a; }
+
+  .task-hours {
+    font-size: 10px;
+    color: #3a3a3a;
+  }
+
+  .exam-day .day-header {
+    background: #130f0f;
+  }
+
+  .exam-day .day-label {
+    color: #7a3a3a;
+  }
+
+  .exam-badge {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: #c05050;
+    background: #1c0f0f;
+    border: 1px solid #3a1a1a;
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="top" id="exams"></div>
+<div class="days-container" id="days"></div>
+
+<script>
+const exams = [
+  { name: "Religion",   days: 14 },
+  { name: "Persian",    days: 16 },
+  { name: "Math",       days: 18 },
+  { name: "Biology",    days: 21 },
+  { name: "Arabic",     days: 23 },
+  { name: "English",    days: 24 },
+  { name: "Physics",    days: 27 },
+  { name: "Hoviat",     days: 29 },
+  { name: "Health",     days: 31 },
+  { name: "Chemistry",  days: 33 },
+];
+
+const plan = [
+  { day: 1, date: "Tir 7",  tasks: [
+    { subject: "Religion", desc: "1",         hours: 2 },
+    { subject: "Persian",  desc: "PreClass",  hours: 4 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "2",         hours: 4 },
+  ]},
+  { day: 2, date: "Tir 8",  tasks: [
+    { subject: "Religion", desc: "2",         hours: 2 },
+    { subject: "Persian",  desc: "PreClass",  hours: 4 },
+    { subject: "Math",     desc: "2–3",       hours: 4 },
+    { subject: "Biology",  desc: "Test",      hours: 2 },
+  ]},
+  { day: 3, date: "Tir 9",  tasks: [
+    { subject: "Religion", desc: "Rev",       hours: 1 },
+    { subject: "Persian",  desc: "Review",    hours: 4 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "3",         hours: 4 },
+  ]},
+  { day: 4, date: "Tir 10", tasks: [
+    { subject: "Religion", desc: "4",         hours: 2 },
+    { subject: "Persian",  desc: "1–2",       hours: 4 },
+    { subject: "Math",     desc: "3–4",       hours: 4 },
+    { subject: "Biology",  desc: "Test",      hours: 2 },
+  ]},
+  { day: 5, date: "Tir 11", tasks: [
+    { subject: "Religion", desc: "5",         hours: 2 },
+    { subject: "Persian",  desc: "3–5",       hours: 4 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "Review",    hours: 2 },
+  ]},
+  { day: 6, date: "Tir 12", tasks: [
+    { subject: "Religion", desc: "Rev",       hours: 1 },
+    { subject: "Persian",  desc: "Review",    hours: 4 },
+    { subject: "Math",     desc: "Review",    hours: 2 },
+    { subject: "Biology",  desc: "4",         hours: 4 },
+  ]},
+  { day: 7, date: "Tir 13", tasks: [
+    { subject: "Religion", desc: "6",         hours: 2 },
+    { subject: "Persian",  desc: "8–9",       hours: 4 },
+    { subject: "Math",     desc: "5–6",       hours: 4 },
+    { subject: "Biology",  desc: "Test",      hours: 4 },
+  ]},
+  { day: 8, date: "Tir 14", tasks: [
+    { subject: "Religion", desc: "7–8",       hours: 2 },
+    { subject: "Persian",  desc: "12–13",     hours: 4 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "5",         hours: 4 },
+    { subject: "Arabic",   desc: "Pre",       hours: 3 },
+  ]},
+  { day: 9, date: "Tir 15", tasks: [
+    { subject: "Religion", desc: "Rev",       hours: 1 },
+    { subject: "Persian",  desc: "Review",    hours: 4 },
+    { subject: "Math",     desc: "7–8",       hours: 4 },
+    { subject: "Biology",  desc: "Test",      hours: 4 },
+    { subject: "Arabic",   desc: "Pre",       hours: 3 },
+  ]},
+  { day: 10, date: "Tir 16", tasks: [
+    { subject: "Religion", desc: "9–10",      hours: 2 },
+    { subject: "Persian",  desc: "14–16",     hours: 4 },
+    { subject: "Math",     desc: "Review",    hours: 2 },
+    { subject: "Biology",  desc: "Review",    hours: 2 },
+    { subject: "Arabic",   desc: "1",         hours: 3 },
+  ]},
+  { day: 11, date: "Tir 17", tasks: [
+    { subject: "Religion", desc: "Rev",       hours: 1 },
+    { subject: "Persian",  desc: "6–7",       hours: 4 },
+    { subject: "Math",     desc: "9",         hours: 4 },
+    { subject: "Biology",  desc: "6",         hours: 4 },
+    { subject: "Arabic",   desc: "Test",      hours: 2 },
+  ]},
+  { day: 12, date: "Tir 18", tasks: [
+    { subject: "Religion", desc: "Mock",      hours: 2 },
+    { subject: "Persian",  desc: "Review",    hours: 4 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "Test",      hours: 2 },
+    { subject: "Arabic",   desc: "2",         hours: 3 },
+  ]},
+  { day: 13, date: "Tir 19", tasks: [
+    { subject: "Religion", desc: "Mock",      hours: 2 },
+    { subject: "Persian",  desc: "10–11",     hours: 4 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "7",         hours: 4 },
+    { subject: "Arabic",   desc: "Test",      hours: 2 },
+  ]},
+  { day: 14, date: "Tir 20", tasks: [
+    { subject: "Religion", desc: "Mock",      hours: 6 },
+    { subject: "Persian",  desc: "17–18",     hours: 4 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "Test",      hours: 4 },
+    { subject: "Arabic",   desc: "Review",    hours: 2 },
+  ]},
+  { day: 15, date: "Tir 21", examToday: "RELIGION EXAM", tasks: [
+    { subject: "Persian",  desc: "Mock",      hours: 4 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "8",         hours: 4 },
+    { subject: "Arabic",   desc: "3",         hours: 3 },
+    { subject: "Physics",  desc: "1",         hours: 3 },
+  ]},
+  { day: 16, date: "Tir 22", tasks: [
+    { subject: "Persian",  desc: "Mock",      hours: 6 },
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "Test",      hours: 2 },
+    { subject: "Arabic",   desc: "Test",      hours: 2 },
+    { subject: "Physics",  desc: "Test",      hours: 2 },
+  ]},
+  { day: 17, date: "Tir 23", examToday: "PERSIAN EXAM", tasks: [
+    { subject: "Math",     desc: "Test",      hours: 2 },
+    { subject: "Biology",  desc: "Review",    hours: 2 },
+    { subject: "Arabic",   desc: "4",         hours: 3 },
+    { subject: "Physics",  desc: "2",         hours: 3 },
+  ]},
+];
+
+// Load state
+function stateKey(day, ti) { return `d${day}_t${ti}`; }
+function isChecked(day, ti) {
+  return localStorage.getItem(stateKey(day, ti)) === '1';
+}
+function toggle(day, ti) {
+  const k = stateKey(day, ti);
+  localStorage.getItem(k) === '1'
+    ? localStorage.removeItem(k)
+    : localStorage.setItem(k, '1');
+}
+
+// Render exams
+const examEl = document.getElementById('exams');
+exams.forEach(e => {
+  const cls = e.days <= 16 ? 'urgent' : e.days <= 22 ? 'soon' : 'ok';
+  examEl.innerHTML += `<div class="exam-pill ${cls}">
+    <span class="name">${e.name}</span>
+    <span class="days">${e.days}d</span>
+  </div>`;
+});
+
+// Render days
+const daysEl = document.getElementById('days');
+plan.forEach(d => {
+  const isExam = !!d.examToday;
+  const block = document.createElement('div');
+  block.className = 'day-block' + (isExam ? ' exam-day' : '');
+
+  // Compute done count
+  const done = () => d.tasks.filter((_, ti) => isChecked(d.day, ti)).length;
+  const total = d.tasks.length;
+
+  const headerHTML = () => {
+    const doneCount = done();
+    const pct = Math.round((doneCount / total) * 100);
+    const chips = d.tasks.map((t, ti) =>
+      `<span class="task-chip${isChecked(d.day, ti) ? ' done' : ''}">${t.subject}</span>`
+    ).join('');
+    return `
+      <div class="day-label">Day ${d.day} · ${d.date}</div>
+      ${isExam ? `<span class="exam-badge">${d.examToday}</span>` : ''}
+      <div class="day-tasks-inline">${chips}</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" style="width:${pct}%"></div>
+      </div>
+    `;
+  };
+
+  const detailHTML = () => d.tasks.map((t, ti) => {
+    const checked = isChecked(d.day, ti);
+    return `<div class="task-row${checked ? ' done' : ''}" data-day="${d.day}" data-ti="${ti}">
+      <div class="task-check${checked ? ' checked' : ''}"></div>
+      <div class="task-subject">${t.subject}</div>
+      <div class="task-desc">${t.desc}</div>
+      <div class="task-hours">${t.hours}h</div>
+    </div>`;
+  }).join('');
+
+  block.innerHTML = `
+    <div class="day-header">${headerHTML()}</div>
+    <div class="day-detail">${detailHTML()}</div>
+  `;
+
+  const header = block.querySelector('.day-header');
+  const detail = block.querySelector('.day-detail');
+
+  header.addEventListener('click', () => {
+    const open = detail.classList.toggle('open');
+    header.classList.toggle('open', open);
+  });
+
+  detail.addEventListener('click', e => {
+    const row = e.target.closest('.task-row');
+    if (!row) return;
+    const day = +row.dataset.day;
+    const ti = +row.dataset.ti;
+    toggle(day, ti);
+    // Re-render header + detail
+    header.innerHTML = headerHTML();
+    detail.innerHTML = detailHTML();
+  });
+
+  daysEl.appendChild(block);
+});
+</script>
+</body>
+</html>
